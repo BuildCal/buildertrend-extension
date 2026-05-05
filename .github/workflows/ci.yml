@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  web:
+    name: Web (Next.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+      - run: pnpm db:generate
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm build
+        env:
+          # Build-time env vars (use placeholders; real values set in Vercel)
+          DATABASE_URL: postgresql://placeholder@placeholder/placeholder
+          NEXTAUTH_SECRET: placeholder
+          NEXTAUTH_URL: http://localhost:3000
+          BT_SERVICE_URL: http://placeholder
+          BT_SERVICE_INTERNAL_TOKEN: placeholder
+          EXTRACTOR_WEBHOOK_SECRET: placeholder
+
+  bt-service:
+    name: BT Service (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/bt-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check app
+      - run: mypy app || true
+      - run: pytest

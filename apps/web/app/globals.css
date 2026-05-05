@@ -1,0 +1,149 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Backgrounds — slate-50 / slate-900 */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    /* Cards / surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    /* Popovers / menus */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primary — indigo-600 #4F46E5 */
+    --primary: 239 84% 59%;
+    --primary-foreground: 0 0% 100%;
+    --primary-deep: 243 47% 20%; /* indigo-950 #1E1B4B */
+
+    /* Subtle / muted — slate-100 / slate-500 */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent — indigo-50 / indigo-950 */
+    --accent: 226 100% 97%;
+    --accent-foreground: 243 47% 20%;
+
+    /* Destructive — red-600 */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders / inputs — slate-200 */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 239 84% 59%;
+
+    /* Radii — slightly tighter than typical shadcn lg */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 217 33% 17%;
+    --card-foreground: 210 40% 98%;
+    --popover: 217 33% 17%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 238 88% 67%;
+    --primary-foreground: 0 0% 100%;
+    --primary-deep: 243 47% 20%;
+    --secondary: 215 25% 27%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 215 25% 27%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 243 47% 20%;
+    --accent-foreground: 214 32% 91%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 25% 27%;
+    --input: 215 25% 27%;
+    --ring: 238 88% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Tighter typography defaults */
+  h1 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-size: 0.95rem;
+    line-height: 1.5rem;
+    font-weight: 600;
+  }
+
+  /* Tabular numbers in tables */
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* Page enter animation — subtle fade */
+  .page-enter {
+    animation: page-enter 0.15s ease-out;
+  }
+
+  @keyframes page-enter {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Compact data tables */
+  .data-table {
+    font-size: 0.8125rem; /* 13px */
+    line-height: 1.25rem;
+  }
+  .data-table th {
+    font-size: 0.6875rem; /* 11px */
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Status pill — use throughout the app */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 0 0.375rem;
+    font-size: 0.71875rem;
+    font-weight: 500;
+    line-height: 1rem;
+    box-shadow: 0 0 0 1px hsl(var(--border));
+  }
+}
