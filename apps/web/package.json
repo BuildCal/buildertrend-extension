@@ -16,7 +16,7 @@
     "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.93.0",
+    "@anthropic-ai/sdk": "^0.122.0",
     "@auth/prisma-adapter": "^2.7.0",
     "@hookform/resolvers": "^3.9.0",
     "@prisma/client": "^5.20.0",
@@ -30,7 +30,7 @@
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.453.0",
+    "lucide-react": "^1.35.0",
     "next": "14.2.15",
     "next-auth": "^5.0.0-beta.22",
     "react": "^18.3.1",
@@ -45,7 +45,7 @@
     "@types/node": "^22.7.5",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
-    "autoprefixer": "^10.4.20",
+    "autoprefixer": "^10.5.4",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.15",
     "postcss": "^8.4.47",
