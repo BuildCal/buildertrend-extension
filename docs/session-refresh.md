@@ -7,7 +7,7 @@ How the team keeps the Buildertrend connection alive.
 Every morning, before the team starts approving bills:
 
 1. Open https://buildertrend.net in Chrome and log in normally.
-2. Visit the BT Tools admin → Refresh Buildertrend session page.
+2. Open this app → Admin → BT Session.
 3. Use the "Get cookies.txt LOCALLY" extension to export cookies.
 4. Upload the file. The page verifies the session is valid before
    storing it.

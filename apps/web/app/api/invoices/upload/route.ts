@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getSupabaseAdmin, STORAGE_BUCKET } from "@/lib/supabase-admin";
 
 const ACCEPTED_TYPES = [
   "application/pdf",
@@ -40,8 +40,8 @@ export async function POST(request: NextRequest) {
 
     const arrayBuffer = await file.arrayBuffer();
 
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from("bill-pdfs")
+    const { error: uploadError } = await getSupabaseAdmin()
+      .storage.from(STORAGE_BUCKET)
       .upload(filePath, arrayBuffer, {
         contentType: file.type,
         upsert: false,

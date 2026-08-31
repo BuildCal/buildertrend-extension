@@ -5,11 +5,7 @@ from fastapi import APIRouter, Depends
 from app.auth import require_internal_token
 from app.clients import BTAuthError, BTClient
 from app.models.api import SessionStatus, SessionUploadRequest
-from app.session_store import (
-    get_active_session,
-    get_session_status,
-    store_session,
-)
+from app.session_store import get_session_status, store_session
 
 router = APIRouter(
     prefix="/sessions",
@@ -34,7 +30,7 @@ async def refresh_session(req: SessionUploadRequest) -> SessionStatus:
     test_client = BTClient(cookies=cookies_dict)
     try:
         test_client.get_account_info()
-    except BTAuthError as e:
+    except BTAuthError:
         return SessionStatus(
             is_authenticated=False,
             captured_by=req.captured_by_user_id,

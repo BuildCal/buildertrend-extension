@@ -14,7 +14,7 @@ import json
 import logging
 from collections.abc import Coroutine
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from cryptography.fernet import Fernet
@@ -66,8 +66,7 @@ async def _ensure_schema() -> None:
         async with get_session() as db:
             await db.execute(
                 text(
-                    'ALTER TABLE "BTSessionStatus" '
-                    'ADD COLUMN IF NOT EXISTS "encryptedCookies" TEXT'
+                    'ALTER TABLE "BTSessionStatus" ADD COLUMN IF NOT EXISTS "encryptedCookies" TEXT'
                 )
             )
         _schema_initialized = True
@@ -106,7 +105,7 @@ async def _save_to_db(session: StoredSession) -> None:
     await _ensure_schema()
     payload = json.dumps(session.cookies)
     encrypted = _fernet().encrypt(payload.encode()).decode()
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     async with get_session() as db:
         await db.execute(
             text("""
@@ -163,7 +162,7 @@ def store_session(
 ) -> None:
     """Save the session, both to in-memory cache and to the DB."""
     global _cached
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     stored = StoredSession(
         cookies=cookies,
         captured_by=captured_by_user_id,
@@ -198,9 +197,8 @@ def get_active_session() -> StoredSession | None:
             # task and return None on first call; subsequent calls will hit
             # the cache. So: kick off the load, return None this time.
             #
-            # In practice this only matters on the very first request after
-            # uvicorn restart. The user will see one transient "no session"
-            # which clears on retry. Acceptable for tonight.
+            # First request after a restart may miss the cache if startup
+            # load has not finished; the next request hits the populated cache.
 
             async def _populate() -> None:
                 global _cached

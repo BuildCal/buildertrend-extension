@@ -6,7 +6,7 @@ import {
   matchVendor,
 } from "@/lib/invoice-matching";
 import { prisma } from "@/lib/prisma";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getSupabaseAdmin, STORAGE_BUCKET } from "@/lib/supabase-admin";
 
 import { InvoiceReviewForm } from "./review-form";
 
@@ -14,14 +14,19 @@ export const dynamic = "force-dynamic";
 
 async function getSignedPdfUrl(filePath: string | null): Promise<string | null> {
   if (!filePath) return null;
-  const { data, error } = await supabaseAdmin.storage
-    .from("bill-pdfs")
-    .createSignedUrl(filePath, 60 * 30);
-  if (error || !data) {
-    console.error("[review] signed URL error:", error);
+  try {
+    const { data, error } = await getSupabaseAdmin()
+      .storage.from(STORAGE_BUCKET)
+      .createSignedUrl(filePath, 60 * 30);
+    if (error || !data) {
+      console.error("[review] signed URL error:", error);
+      return null;
+    }
+    return data.signedUrl;
+  } catch (err) {
+    console.error("[review] signed URL error:", err);
     return null;
   }
-  return data.signedUrl;
 }
 
 export default async function InvoiceReviewPage({

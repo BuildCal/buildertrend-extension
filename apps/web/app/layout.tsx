@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Buildertrend Tools",
-  description: "Internal tooling for Wattle Court",
+  title: "Buildertrend Extension",
+  description: "Self-hosted Buildertrend bill workflows",
 };
 
 export default function RootLayout({

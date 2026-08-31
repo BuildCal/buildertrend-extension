@@ -9,8 +9,8 @@ you're tempted to refactor.
 go through a separate Python FastAPI service.
 
 **Why:** Buildertrend's edge layer rejects connections that don't have a
-Chrome-like TLS handshake. Reverse-engineering tests during the project
-showed that `requests` (Python) and the Node.js standard library both fail.
+Chrome-like TLS handshake. Tests during development showed that
+`requests` (Python) and the Node.js standard library both fail.
 `curl-cffi` (Python) succeeds via TLS fingerprint impersonation. There is
 no mature Node.js equivalent at the time of writing.
 
@@ -71,6 +71,6 @@ whose instruction.
 **Decision:** Components live in our own repo (copy-paste from shadcn)
 rather than importing from a packaged library.
 
-**Why:** Internal tools live for years. Shipping our own UI primitives
-means we never have a "library X is now deprecated" upgrade scramble.
-The cost is one-time at project start.
+**Why:** This app is expected to live for years. Shipping our own UI
+primitives means we never have a "library X is now deprecated" upgrade
+scramble. The cost is one-time at project start.

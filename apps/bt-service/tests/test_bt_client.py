@@ -18,9 +18,9 @@ def mock_settings():
 
 
 def test_session_redirect_to_error_raises_auth_error(mock_settings):
-    with patch("app.clients.bt_client.cffi_requests.Session") as Sess:
+    with patch("app.clients.bt_client.cffi_requests.Session") as session_cls:
         session_mock = MagicMock()
-        Sess.return_value = session_mock
+        session_cls.return_value = session_mock
         resp = MagicMock()
         resp.status_code = 302
         resp.headers = {"location": "/app/error", "content-type": ""}

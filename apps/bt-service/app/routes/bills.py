@@ -1,8 +1,9 @@
 """Bills routes — what the web app calls to create/read bills in BT."""
 
-from datetime import datetime, timedelta
+from typing import NoReturn
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi import status as http_status
 
 from app.auth import require_internal_token
 from app.clients import BTAPIError, BTAuthError, BTClient
@@ -36,10 +37,22 @@ def _client_for_active_session() -> BTClient:
     session = get_active_session()
     if session is None:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="No active Buildertrend session. Admin must refresh.",
         )
     return BTClient(cookies=session.cookies)
+
+
+def _reraise_bt(exc: BTAuthError | BTAPIError) -> NoReturn:
+    if isinstance(exc, BTAuthError):
+        raise HTTPException(
+            status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    raise HTTPException(
+        status_code=http_status.HTTP_502_BAD_GATEWAY,
+        detail=str(exc),
+    ) from exc
 
 
 def _parse_job_ids_csv(job_ids: str | None) -> list[int] | None:
@@ -55,11 +68,11 @@ def _parse_job_ids_csv(job_ids: str | None) -> list[int] | None:
             continue
         try:
             out.append(int(piece))
-        except ValueError:
+        except ValueError as exc:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail="job_ids must be a comma-separated list of integers",
-            )
+            ) from exc
     return out or None
 
 
@@ -67,12 +80,9 @@ def _parse_job_ids_csv(job_ids: str | None) -> list[int] | None:
 async def create_bill(req: CreateBillRequest) -> CreateBillResponse:
     """Create a bill in Buildertrend.
 
-    Idempotent on `source_extraction_id` — the same id will return the
-    previously-created bill rather than create a duplicate.
+    The web app enforces idempotency on `source_extraction_id` before
+    calling this endpoint. Audit logging also lives in the web app.
     """
-    # TODO: check idempotency log for source_extraction_id
-    # TODO: write to audit log before+after the BT call
-
     try:
         client = _client_for_active_session()
 
@@ -86,16 +96,8 @@ async def create_bill(req: CreateBillRequest) -> CreateBillResponse:
             external_id=bill_data["externalId"],
             status="created",
         )
-    except BTAuthError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"BT session invalid: {e}",
-        )
-    except BTAPIError as e:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Buildertrend rejected the request: {e}",
-        )
+    except (BTAuthError, BTAPIError) as e:
+        _reraise_bt(e)
 
 
 @router.get("")
@@ -110,7 +112,7 @@ async def list_bills(
 ) -> dict:
     if status not in STATUS_PRESETS:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=http_status.HTTP_400_BAD_REQUEST,
             detail=f"status must be one of: {', '.join(sorted(STATUS_PRESETS))}",
         )
     parsed_job_ids = _parse_job_ids_csv(job_ids)
@@ -125,14 +127,8 @@ async def list_bills(
             sort_direction=sort_direction,
             search_text=search,
         )
-    except BTAuthError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
-        )
-    except BTAPIError as e:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e)
-        )
+    except (BTAuthError, BTAPIError) as e:
+        _reraise_bt(e)
 
 
 @router.get("/_meta/tab-counts")
@@ -147,14 +143,8 @@ async def bill_tab_counts(
             job_ids=parsed_job_ids,
             search_text=search,
         )
-    except BTAuthError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
-        )
-    except BTAPIError as e:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e)
-        )
+    except (BTAuthError, BTAPIError) as e:
+        _reraise_bt(e)
 
 
 @router.get("/{bill_id}")
@@ -162,10 +152,8 @@ async def get_bill(bill_id: int) -> dict:
     client = _client_for_active_session()
     try:
         return client.get_bill(bill_id)
-    except BTAuthError as e:
-        raise HTTPException(503, str(e))
-    except BTAPIError as e:
-        raise HTTPException(502, str(e))
+    except (BTAuthError, BTAPIError) as e:
+        _reraise_bt(e)
 
 
 # ----------------------------------------------------------------------
@@ -173,16 +161,17 @@ async def get_bill(bill_id: int) -> dict:
 # from the rest of the codebase.
 # ----------------------------------------------------------------------
 
+
 def _build_bt_bill_payload(req: CreateBillRequest) -> dict:
     """Translate our clean CreateBillRequest into the BT API's payload.
 
     BT expects ~50 fields, most of which are UI configuration noise.
     We send the minimum that produces a valid bill.
-    """
-    # TODO: vendor lookup. For now, the web app must pass the vendor_id
-    # and we trust it. Eventually we should call get_bill_defaults to
-    # validate the vendor exists for this job.
 
+    The web app is expected to pass a `vendor_id` that is valid for the
+    job (from `/lookups/vendors-for-job/{job_id}`). This sidecar does
+    not re-fetch the vendor list on every create.
+    """
     return {
         "billNumber": req.bill_number,
         "billTitle": req.bill_title,

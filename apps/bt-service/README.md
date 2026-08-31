@@ -1,68 +1,74 @@
 # bt-service
 
-Python FastAPI service that proxies all Buildertrend API calls.
+Python FastAPI sidecar that makes every Buildertrend HTTP call.
 
-This service exists because Buildertrend's edge layer checks the TLS
-fingerprint of incoming connections and rejects anything that doesn't
-look like Chrome. We use `curl-cffi` with `impersonate="chrome"` to
-make this work — Node.js doesn't have a clean equivalent, which is why
-this is a separate service from the Next.js frontend.
+Buildertrend’s edge checks TLS fingerprints and rejects clients that do not
+look like Chrome. This service uses `curl-cffi` with `impersonate="chrome"`.
+Node does not have a clean equivalent, which is why this is separate from
+the Next.js app.
+
+**Do not expose this service to the public internet.** Only the web app
+should be able to reach it.
 
 ## Local development
 
 ```bash
-# Set up venv
 python -m venv .venv
 source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 pip install -e ".[dev]"
 
-# Configure
 cp .env.example .env
-# Generate INTERNAL_API_TOKEN and SESSION_ENCRYPTION_KEY (see .env.example)
+# Set INTERNAL_API_TOKEN, SESSION_ENCRYPTION_KEY, DATABASE_URL, BT_BUILDER_ID
 
-# Run
 uvicorn app.main:app --reload --port 8000
 ```
 
-API docs at http://localhost:8000/docs (development only).
+OpenAPI docs: http://localhost:8000/docs (disabled when `ENVIRONMENT=production`).
 
-## Deployment options
+## Deployment
 
-### Fly.io (recommended for this app's size)
+### Fly.io
 
 ```bash
-fly launch  # one-time, generates fly.toml
-fly secrets set INTERNAL_API_TOKEN=<token> SESSION_ENCRYPTION_KEY=<key> ...
+fly launch   # one-time, generates fly.toml
+fly secrets set INTERNAL_API_TOKEN=<token> SESSION_ENCRYPTION_KEY=<key> DATABASE_URL=<url> BT_BUILDER_ID=<id>
 fly deploy
 ```
 
+Lock the app down with Fly private networking or an IP allow-list so only
+the web app can call it.
+
 ### Railway / Render
 
-Both work — point at this directory, they'll detect the Dockerfile.
+Point the service at this directory. Both detect the Dockerfile.
 
-### DigitalOcean droplet
+### Docker
 
 ```bash
 docker build -t bt-service .
-docker run -d --restart unless-stopped \
-  --env-file .env -p 8000:8000 bt-service
+docker run -d --restart unless-stopped --env-file .env -p 8000:8000 bt-service
 ```
 
 ## Auth model
 
-- **Web app → this service:** shared `INTERNAL_API_TOKEN` header
-- **This service → Buildertrend:** stored session cookies (encrypted at rest)
-- **No public endpoints.** Lock this service down with firewall rules
-  / a private network so only the web app can reach it.
+| Hop | Mechanism |
+| --- | --- |
+| Web app → this service | `X-Internal-Token: $INTERNAL_API_TOKEN` |
+| This service → Buildertrend | Encrypted session cookies captured from Chrome |
+| Browser → this service | None. Do not allow it. |
 
 ## Endpoints
 
-- `POST /sessions/refresh` — admin uploads new BT cookies
-- `GET /sessions/status` — is the session still valid?
-- `POST /bills` — create a bill in BT
-- `GET /bills/{id}` — fetch a bill
-- `GET /lookups/jobs` — list jobs
-- `GET /lookups/vendors-for-job/{job_id}` — list vendors assignable to bills
-  for a job
-- `GET /lookups/cost-codes-for-job/{job_id}` — list cost codes for a job
-- `GET /healthz`, `/readyz` — probes
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/sessions/refresh` | Admin uploads new BT cookies |
+| `GET` | `/sessions/status` | Is the session valid? |
+| `POST` | `/bills` | Create a bill in BT |
+| `GET` | `/bills` | List bills (grid) |
+| `GET` | `/bills/{id}` | Fetch a bill |
+| `GET` | `/lookups/jobs` | List jobs |
+| `GET` | `/lookups/vendors-for-job/{job_id}` | Vendors assignable on a job |
+| `GET` | `/lookups/cost-codes-for-job/{job_id}` | Cost codes for a job |
+| `POST` | `/sync/all` | Mirror jobs/vendors/POs/bills into Postgres |
+| `GET` | `/sync/status` | Last-synced timestamps |
+| `GET` | `/healthz`, `/readyz` | Probes |

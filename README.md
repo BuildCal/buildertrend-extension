@@ -1,92 +1,122 @@
-# Buildertrend Tools
+# Buildertrend Extension
 
-Internal tooling for Wattle Court that automates Buildertrend admin workflows
-including bill creation from extracted invoice data, PO matching, and dashboards.
+Self-hosted tools for Buildertrend bill workflows: invoice extraction, PO matching, a review queue, and dashboards.
+
+> **Unofficial.** This project is not affiliated with, endorsed by, or supported by Buildertrend. It talks to undocumented internal APIs that can change without notice. Use it only against **your own** Buildertrend account, and review [Buildertrend’s terms of service](https://buildertrend.com) before deploying.
+
+## What it does
+
+- Capture a logged-in Buildertrend session (cookie upload) so the sidecar can call BT as you
+- Mirror jobs, vendors, cost codes, POs, and bills into Postgres
+- Accept extracted invoices via webhook (or upload PDFs and extract with Claude)
+- Match invoices to vendors, jobs, and purchase orders
+- Require human review before posting a bill back to Buildertrend
+- Append-only audit log of every mutating action
 
 ## Architecture
 
-This is a monorepo containing two deployable services and shared types:
+Two services, one database:
 
 ```
 apps/
-  web/            Next.js 14 (App Router, TypeScript, Tailwind, shadcn/ui)
-                  → deploys to Vercel
-                  Handles all UI, user auth, dashboards, webhook receiver
-  bt-service/     Python FastAPI service (curl-cffi for TLS impersonation)
-                  → deploys to Fly.io / Railway / DigitalOcean
-                  Handles ALL Buildertrend API calls. Holds BT session.
-packages/
-  shared-types/   TypeScript types mirroring the Python service contracts
+  web/          Next.js 14 (App Router, TypeScript, Tailwind)
+                UI, auth, dashboards, webhook receiver
+                typically deployed to Vercel
+  bt-service/   Python FastAPI + curl-cffi (Chrome TLS impersonation)
+                All Buildertrend HTTP calls and session storage
+                typically deployed to Fly.io / Railway / a VM
 ```
 
-## Why two services?
+Buildertrend’s edge rejects connections that do not look like Chrome. `curl-cffi` handles TLS fingerprint impersonation; there is no mature Node equivalent, which is why the sidecar is Python.
 
-Buildertrend's API requires Chrome's TLS fingerprint to accept connections.
-We use `curl-cffi` (Python) for this. Node.js does not have a clean equivalent.
+The two services talk over HTTPS with a shared `INTERNAL_API_TOKEN`. The sidecar must **not** be public — put it on a private network, tunnel, or IP allow-list.
 
-Therefore:
-- **Web app** runs on Vercel (great DX, free tier, scales)
-- **BT service** runs on a normal VM/container so we can use curl-cffi
-- They communicate over HTTPS with a shared internal token
+## Status
 
-## Getting started
+Pre-alpha. Expect breakage when Buildertrend ships UI or API changes. Budget time for ongoing maintenance.
 
-### Prerequisites
+## Prerequisites
+
 - Node.js 20+
-- pnpm 9+ (`npm install -g pnpm`)
+- pnpm 9+
 - Python 3.11+
-- Docker (for local dev with the database)
+- Docker (local Postgres)
 
-### Local development
+## Quick start
 
 ```bash
-# 1. Install everything
+git clone https://github.com/BuildCal/buildertrend-extension.git
+cd buildertrend-extension
+
 pnpm install
-cd apps/bt-service && python -m venv .venv && source .venv/bin/activate
-pip install -e .
+
+cd apps/bt-service
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
 cd ../..
 
-# 2. Copy env files
 cp apps/web/.env.example apps/web/.env.local
 cp apps/bt-service/.env.example apps/bt-service/.env
+# Generate secrets — see docs/getting-started.md
 
-# 3. Start the database (Postgres in Docker)
 docker compose up -d
+pnpm db:migrate
+pnpm db:seed -- admin@yourcompany.com
 
-# 4. Run database migrations
-pnpm --filter web db:migrate
-
-# 5. In one terminal, run the Python service:
+# terminal 1
 cd apps/bt-service && source .venv/bin/activate
 uvicorn app.main:app --reload --port 8000
 
-# 6. In another terminal, run the web app:
-pnpm --filter web dev
+# terminal 2
+pnpm dev
 ```
 
-Web app: http://localhost:3000
-BT service: http://localhost:8000 (docs at /docs)
+- Web app: http://localhost:3000
+- BT service: http://localhost:8000 (OpenAPI at `/docs` in development)
 
-### Deployment
-
-- **Web app:** push to GitHub, connect to Vercel, set env vars. Done.
-- **BT service:** see `apps/bt-service/README.md` for Fly.io / Railway / Docker
-  deployment instructions.
-- **Database:** managed Postgres (Neon recommended for free tier).
+Full walkthrough, including session capture and a smoke-test webhook: [docs/getting-started.md](docs/getting-started.md).
 
 ## Documentation
 
-- [Architecture decisions](docs/architecture.md)
-- [Buildertrend API notes](docs/buildertrend-api.md)
-- [Session refresh process](docs/session-refresh.md)
-- [Security considerations](docs/security.md)
+| Doc | What’s in it |
+| --- | --- |
+| [Getting started](docs/getting-started.md) | Clone, env, first admin, first BT session |
+| [Architecture](docs/architecture.md) | Why the split, review queue, audit log |
+| [Buildertrend API notes](docs/buildertrend-api.md) | Reverse-engineered endpoints (unofficial) |
+| [Session refresh](docs/session-refresh.md) | Daily cookie-upload ritual |
+| [Security](docs/security.md) | Threat model, secret rotation, incident notes |
+| [bt-service README](apps/bt-service/README.md) | Sidecar run / deploy |
 
-## Project status
+## Configuration
 
-Pre-alpha. Built around reverse-engineered Buildertrend endpoints. Expect
-breakage when Buildertrend ships UI updates that change their internal API.
+Every secret is environment-driven. Copy the example files and generate your own values — never commit `.env`, cookie dumps, or HAR captures (already gitignored).
 
-## Maintenance reality check
+Required for a minimal local run:
 
-This tool depends on undocumented Buildertrend API endpoints. They will
-change without notice. Budget time for monthly maintenance.
+- `DATABASE_URL` / `DIRECT_URL` — Postgres
+- `NEXTAUTH_SECRET` — session signing
+- `INTERNAL_API_TOKEN` / `BT_SERVICE_INTERNAL_TOKEN` — shared sidecar token
+- `SESSION_ENCRYPTION_KEY` — Fernet key for BT cookies at rest
+- `BT_BUILDER_ID` — your Buildertrend builder / tenant id
+- `EXTRACTOR_WEBHOOK_SECRET` — inbound webhook auth
+
+Optional (invoice PDF upload + Claude extraction):
+
+- `ANTHROPIC_API_KEY`
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`
+
+## Security
+
+This tool holds a live Buildertrend session. Treat it like production credentials.
+
+- Do not expose `bt-service` to the public internet
+- Do not log cookies, the internal token, or the webhook secret
+- Rotate secrets if a laptop is lost or a teammate leaves
+- Report vulnerabilities privately — see [SECURITY.md](SECURITY.md)
+
+## License
+
+[MIT](LICENSE)
+
+Buildertrend is a trademark of its respective owner. This repository is an independent integration.

@@ -12,8 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
-from http.cookiejar import Cookie
-from typing import Any
+from typing import Any, Literal
 
 from curl_cffi import requests as cffi_requests
 
@@ -73,9 +72,7 @@ def _browser_headers() -> dict[str, str]:
         "content-type": "application/json",
         "portaltype": "1",
         "referer": f"{settings.bt_base_url}/app/Landing",
-        "sec-ch-ua": (
-            '"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"'
-        ),
+        "sec-ch-ua": ('"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"'),
         "sec-ch-ua-mobile": "?0",
         "sec-ch-ua-platform": '"Windows"',
         "sec-fetch-dest": "empty",
@@ -100,7 +97,7 @@ class BTClient:
         """
         settings = get_settings()
         self._base_url = settings.bt_base_url
-        self._session = cffi_requests.Session(impersonate="chrome")
+        self._session: cffi_requests.Session = cffi_requests.Session(impersonate="chrome")
         self._session.headers.update(_browser_headers())
         self._load_cookies(cookies)
 
@@ -115,7 +112,7 @@ class BTClient:
 
     def _request(
         self,
-        method: str,
+        method: Literal["GET", "POST", "PUT", "DELETE", "PATCH"],
         path: str,
         *,
         json_body: Any = None,
@@ -133,16 +130,14 @@ class BTClient:
             location = resp.headers.get("location", "")
             if "/app/error" in location:
                 raise BTAuthError(
-                    f"BT redirected to /app/error on {method} {path}. "
-                    "Session is likely invalid."
+                    f"BT redirected to /app/error on {method} {path}. Session is likely invalid."
                 )
             raise BTAPIError(f"Unexpected redirect on {method} {path}: {location}")
 
         ct = resp.headers.get("content-type", "")
         if "application/json" not in ct:
             raise BTAuthError(
-                f"Expected JSON, got {ct!r} on {method} {path}. "
-                "Session may be expired."
+                f"Expected JSON, got {ct!r} on {method} {path}. Session may be expired."
             )
 
         if resp.status_code >= 400:
@@ -150,9 +145,7 @@ class BTClient:
                 err_body = resp.json()
             except Exception:
                 err_body = resp.text[:500]
-            raise BTAPIError(
-                f"HTTP {resp.status_code} on {method} {path}: {err_body}"
-            )
+            raise BTAPIError(f"HTTP {resp.status_code} on {method} {path}: {err_body}")
 
         body = resp.json()
 
@@ -222,9 +215,7 @@ class BTClient:
         "7,3,6,-2" → Other
         "0,1,2,3,4,5,6,7,8,9,-2" → All
         """
-        filters = _bill_list_filters(
-            status_csv=status_filter, search_text=search_text
-        )
+        filters = _bill_list_filters(status_csv=status_filter, search_text=search_text)
         body: dict[str, Any] = {
             "gridRequest": {
                 "hideMultiJobsColumns": True,
@@ -284,8 +275,7 @@ class BTClient:
         """List open POs for a given vendor on a given job."""
         return self._request(
             "GET",
-            f"/apix/v2/Bills/get-available-purchase-orders/"
-            f"{vendor_id}/{vendor_type}/{job_id}",
+            f"/apix/v2/Bills/get-available-purchase-orders/{vendor_id}/{vendor_type}/{job_id}",
         )
 
     # ------------------------------------------------------------------
@@ -301,5 +291,4 @@ class BTClient:
             params={"jobId": job_id},
         )
 
-    # TODO: add update_bill(), delete_bill(), attach_pdf_to_bill()
-    # once the corresponding HARs are captured.
+    # Not yet captured: update_bill(), delete_bill(), attach_pdf_to_bill().

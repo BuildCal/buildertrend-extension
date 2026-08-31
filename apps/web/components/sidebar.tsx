@@ -80,7 +80,7 @@ export function Sidebar({ userName, userEmail, children }: SidebarProps) {
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[#4F46E5] text-[11px] font-bold text-white">
             BT
           </div>
-          {!collapsed ? <span className="truncate">Buildertrend Tools</span> : null}
+          {!collapsed ? <span className="truncate">Buildertrend Extension</span> : null}
         </Link>
         {!collapsed ? (
           <button

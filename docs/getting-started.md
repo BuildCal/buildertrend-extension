@@ -1,6 +1,6 @@
 # Getting started
 
-A step-by-step for the first time you clone this repo.
+First-time setup after cloning this repository.
 
 ## 1. Prerequisites
 
@@ -9,16 +9,14 @@ A step-by-step for the first time you clone this repo.
 - Python 3.11+ (`python --version`)
 - Docker (for local Postgres)
 
-## 2. Clone & install
+## 2. Clone and install
 
 ```bash
-git clone <repo-url> buildertrend-tools
-cd buildertrend-tools
+git clone https://github.com/BuildCal/buildertrend-extension.git
+cd buildertrend-extension
 
-# Web app deps
 pnpm install
 
-# Python service deps
 cd apps/bt-service
 python -m venv .venv
 source .venv/bin/activate         # Windows: .venv\Scripts\activate
@@ -33,13 +31,14 @@ cp apps/web/.env.example apps/web/.env.local
 cp apps/bt-service/.env.example apps/bt-service/.env
 ```
 
-Generate the secrets:
+Generate secrets and paste them into the corresponding files:
 
 ```bash
 # NEXTAUTH_SECRET
 openssl rand -base64 32
 
-# INTERNAL_API_TOKEN — must match in BOTH .env files
+# INTERNAL_API_TOKEN — must match in BOTH env files
+# (web: BT_SERVICE_INTERNAL_TOKEN, sidecar: INTERNAL_API_TOKEN)
 openssl rand -base64 32
 
 # EXTRACTOR_WEBHOOK_SECRET
@@ -49,8 +48,11 @@ openssl rand -base64 32
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-Paste each into the corresponding `.env` file. The `INTERNAL_API_TOKEN`
-is the only secret that needs to match between the two services.
+`INTERNAL_API_TOKEN` is the only secret that must match between the two services.
+
+Set `BT_BUILDER_ID` in `apps/bt-service/.env` to **your** Buildertrend builder / tenant id (visible in BT URLs and some API responses). Leave the example placeholder if you are only exploring the UI.
+
+Invoice PDF upload and Claude extraction are optional. If you skip those env vars, the rest of the app still runs; upload/extract routes will return a configuration error until you add them.
 
 ## 4. Start the database
 
@@ -58,27 +60,27 @@ is the only secret that needs to match between the two services.
 docker compose up -d
 ```
 
-Wait a few seconds, then run the migration:
+Wait a few seconds, then migrate:
 
 ```bash
-pnpm --filter web db:migrate
+pnpm db:migrate
 ```
 
-This creates the schema. You'll be prompted to name the migration on
-the first run — call it `init`.
+On the first run Prisma may ask you to name a migration if the schema has drifted. Existing migrations in `apps/web/prisma/migrations` should apply as-is.
+
+For local Docker Postgres, `DIRECT_URL` can be the same value as `DATABASE_URL`. Hosted providers that use a pooler (Neon, Supabase) need a direct (non-pooled) URL in `DIRECT_URL`.
 
 ## 5. Create the first admin user
 
 ```bash
-pnpm --filter web exec tsx scripts/seed.ts admin@yourcompany.com
+pnpm db:seed -- admin@yourcompany.com
 ```
 
-It generates a random password and prints it. Save it somewhere
-temporary — you'll change it after first login.
+It generates a random password and prints it. Change it after first login.
 
 ## 6. Run both services
 
-In one terminal — the Python service:
+Terminal 1 — Python sidecar:
 
 ```bash
 cd apps/bt-service
@@ -86,20 +88,20 @@ source .venv/bin/activate
 uvicorn app.main:app --reload --port 8000
 ```
 
-In another — the web app:
+Terminal 2 — web app:
 
 ```bash
-pnpm --filter web dev
+pnpm dev
 ```
 
 Visit http://localhost:3000 and sign in.
 
-## 7. Capture your first BT session
+## 7. Capture your first Buildertrend session
 
-1. In Chrome, log into Buildertrend.
-2. In BT Tools, navigate to Admin → Refresh Buildertrend session.
-3. Use "Get cookies.txt LOCALLY" extension to export buildertrend.net cookies.
-4. Upload the file. The status should turn green.
+1. In Chrome, log into Buildertrend as the account you want the tool to act as.
+2. In this app, open **Admin → BT Session**.
+3. Use the [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) extension to export `buildertrend.net` cookies.
+4. Upload the file. Status should turn green after the sidecar verifies the session.
 
 ## 8. Send a test bill via webhook
 
@@ -118,26 +120,17 @@ curl -X POST http://localhost:3000/api/webhooks/extracted-bill \
   }'
 ```
 
-Check the bills queue at http://localhost:3000/bills — the test bill
-should be there. Click "Review →" to step through approval and post
-to BT.
+Open http://localhost:3000/bills — the test bill should be in the review queue.
 
-## Deployment (when ready)
+## Deployment
 
-- **Web app:** push to GitHub → connect repo to Vercel → set env vars in
-  Vercel project settings (matching `.env.example`) → deploy. Add the
-  Postgres URL from a managed provider (Neon free tier recommended).
-- **bt-service:** see `apps/bt-service/README.md`. Recommended:
-  Fly.io with `fly launch`.
-- **Webhook:** point your Claude extraction tool at
-  `https://your-app.vercel.app/api/webhooks/extracted-bill`.
+- **Web app:** connect the repo to Vercel, set env vars from `apps/web/.env.example`, and point `DATABASE_URL` / `DIRECT_URL` at managed Postgres (Neon works on the free tier).
+- **bt-service:** see `apps/bt-service/README.md`. Fly.io is a good default. Keep it off the public internet.
+- **Webhook:** point your extractor at `https://<your-app>/api/webhooks/extracted-bill`.
 
 ## Common issues
 
-- **`prisma generate` errors on Vercel build:** confirm `vercel.json`
-  has `"buildCommand": "pnpm db:generate && pnpm build"`.
-- **bt-service unreachable from Vercel:** make sure your bt-service
-  host's URL in `BT_SERVICE_URL` is reachable from Vercel's edge,
-  and that any IP allow-listing includes Vercel's egress IPs.
-- **TLS impersonation failures:** make sure Python is 3.11+ and
-  `curl-cffi` installed cleanly (no compilation errors in `pip install`).
+- **`prisma generate` errors on Vercel:** `apps/web/vercel.json` already runs `pnpm db:generate && pnpm build`. Confirm `DATABASE_URL` and `DIRECT_URL` are set in the Vercel project.
+- **bt-service unreachable from Vercel:** `BT_SERVICE_URL` must be reachable from Vercel’s egress, and any IP allow-list must include those IPs (or use a tunnel).
+- **TLS impersonation failures:** Python 3.11+ and a clean `curl-cffi` install (no compile errors during `pip install`).
+- **`BT_BUILDER_ID` wrong:** sync writes jobs/vendors/bills under that id. If mirrors look empty, the id is usually wrong.

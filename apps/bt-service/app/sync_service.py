@@ -4,7 +4,7 @@ Each function fetches a slice of BT data, transforms it to match the
 Prisma-owned bt_* table shape, and upserts via SQLAlchemy.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -64,7 +64,7 @@ async def sync_jobs(session: AsyncSession, client: BTClient, builder_id: int) ->
                 "jobNumber": j.get("jobNumber"),
                 "status": _str_or_none(j.get("jobStatus")),
                 "address": j.get("street") or j.get("address"),
-                "syncedAt": datetime.utcnow(),
+                "syncedAt": datetime.now(UTC),
             },
         )
         count += 1
@@ -104,7 +104,7 @@ async def sync_vendors_global(
                 "email": extra.get("emailAddresses"),
                 "phone": _str_or_none(extra.get("phone")),
                 "userType": extra.get("userType", 2),
-                "syncedAt": datetime.utcnow(),
+                "syncedAt": datetime.now(UTC),
             }
 
     # Sort by btVendorId so all workers (if there were any) take locks
@@ -166,7 +166,7 @@ async def sync_vendors_for_job(
                     "email": extra.get("emailAddresses"),
                     "phone": _str_or_none(extra.get("phone")),
                     "userType": extra.get("userType", 2),
-                    "syncedAt": datetime.utcnow(),
+                    "syncedAt": datetime.now(UTC),
                 },
             )
             count += 1
@@ -200,15 +200,11 @@ async def sync_cost_codes_for_job(
                 "btCostCodeId": cc_id,
                 "builderId": builder_id,
                 "btJobId": job_id,
-                "code": _str_or_none(
-                    c.get("code") or c.get("displayCode") or c.get("displayName")
-                )
+                "code": _str_or_none(c.get("code") or c.get("displayCode") or c.get("displayName"))
                 or "",
-                "title": _str_or_none(
-                    c.get("title") or c.get("name") or c.get("displayName")
-                )
+                "title": _str_or_none(c.get("title") or c.get("name") or c.get("displayName"))
                 or "",
-                "syncedAt": datetime.utcnow(),
+                "syncedAt": datetime.now(UTC),
             },
         )
         count += 1
@@ -288,7 +284,7 @@ async def sync_bills_for_jobs(
                         "btBillId": bill_id,
                         "builderId": builder_id,
                         "btJobId": b.get("jobId"),
-                        "btVendorId": None,  # not exposed in grid response; resolved later via payTo
+                        "btVendorId": None,  # not in grid response; resolved later via payTo
                         "btPurchaseOrderId": first_po_id,
                         "billNumber": _str_or_none(bill_number_link.get("title")),
                         "billTitle": _str_or_none(bill_title_link.get("title")),
@@ -300,14 +296,16 @@ async def sync_bills_for_jobs(
                         "payToName": _str_or_none(pay_to_obj.get("payTo")),
                         "paymentStatus": po_status_obj.get("paymentStatus"),
                         "purchaseOrderNumber": _str_or_none(b.get("billPurchaseOrderNumber")),
-                        "syncedAt": datetime.utcnow(),
+                        "syncedAt": datetime.now(UTC),
                     }
                 )
 
             rows.sort(key=lambda r: r["btBillId"])
 
             # FK to bt_purchase_orders — only keep PO ids already mirrored (PO sync may lag).
-            po_ids = {r["btPurchaseOrderId"] for r in rows if r.get("btPurchaseOrderId") is not None}
+            po_ids = {
+                r["btPurchaseOrderId"] for r in rows if r.get("btPurchaseOrderId") is not None
+            }
             if po_ids:
                 existing = await session.execute(
                     text(

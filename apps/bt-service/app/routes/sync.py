@@ -11,7 +11,12 @@ from app.clients import BTAPIError, BTAuthError, BTClient
 from app.config import get_settings
 from app.db import get_session
 from app.session_store import get_active_session
-from app.sync_service import sync_bills_for_jobs, sync_cost_codes_for_job, sync_jobs, sync_vendors_global
+from app.sync_service import (
+    sync_bills_for_jobs,
+    sync_cost_codes_for_job,
+    sync_jobs,
+    sync_vendors_global,
+)
 
 router = APIRouter(
     prefix="/sync",
@@ -148,7 +153,5 @@ async def sync_status() -> dict:
             # `table` is only ever a literal from the tuple above (not user input).
             cursor = await db.execute(text(f'SELECT MAX("syncedAt") FROM {table}'))
             value = cursor.scalar()
-            result[table] = (
-                value.isoformat().replace("+00:00", "Z") if value is not None else None
-            )
+            result[table] = value.isoformat().replace("+00:00", "Z") if value is not None else None
         return {"last_synced": result}

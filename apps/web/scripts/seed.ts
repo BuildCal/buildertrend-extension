@@ -1,10 +1,10 @@
 /**
  * Run this once to create the first admin user.
  *
- *   pnpm --filter web exec tsx scripts/seed.ts
+ *   pnpm db:seed
  *
- * Or interactively:
- *   pnpm --filter web exec tsx scripts/seed.ts admin@yourcompany.com
+ * Or with an email argument:
+ *   pnpm db:seed -- admin@yourcompany.com
  */
 
 import bcrypt from "bcryptjs";

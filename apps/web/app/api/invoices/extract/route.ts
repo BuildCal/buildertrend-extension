@@ -1,9 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-import { anthropic, EXTRACTION_MODEL } from "@/lib/anthropic";
+import { EXTRACTION_MODEL, getAnthropic } from "@/lib/anthropic";
 import { auth } from "@/lib/auth";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getSupabaseAdmin, STORAGE_BUCKET } from "@/lib/supabase-admin";
 
 export interface ExtractedInvoiceData {
   supplier: {
@@ -120,8 +120,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "filePath required" }, { status: 400 });
     }
 
-    const { data: fileData, error: downloadError } = await supabaseAdmin.storage
-      .from("bill-pdfs")
+    const { data: fileData, error: downloadError } = await getSupabaseAdmin()
+      .storage.from(STORAGE_BUCKET)
       .download(filePath);
 
     if (downloadError || !fileData) {
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
             { type: "text", text: EXTRACTION_PROMPT },
           ];
 
-    const response = await anthropic.messages.create({
+    const response = await getAnthropic().messages.create({
       model: EXTRACTION_MODEL,
       max_tokens: 4096,
       messages: [{ role: "user", content }],

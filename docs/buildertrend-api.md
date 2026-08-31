@@ -1,7 +1,8 @@
 # Buildertrend API notes
 
-What we've reverse-engineered. Update this when you discover new endpoints
-or BT changes existing ones.
+Unofficial notes from reverse-engineering Buildertrend’s internal HTTP API.
+This is **not** a public or supported API. Endpoints change without notice.
+Update this file when you discover new ones or when BT changes existing ones.
 
 ## Base URLs
 

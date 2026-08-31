@@ -1,0 +1,49 @@
+name: Bug report
+description: Something is broken in this repo (not in Buildertrend itself)
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Never paste session cookies, tokens, HAR files, or live invoice PDFs.**
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - web (Next.js)
+        - bt-service (Python)
+        - docs / CI / repo
+        - not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Environment
+      description: "OS, Node, Python, and how you ran it (local Docker, Vercel, Fly, …)"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (redacted)
+      description: Paste relevant logs with secrets stripped.
+      render: text

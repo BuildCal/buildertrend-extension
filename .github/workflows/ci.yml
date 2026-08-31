@@ -29,8 +29,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm build
         env:
-          # Build-time env vars (use placeholders; real values set in Vercel)
           DATABASE_URL: postgresql://placeholder@placeholder/placeholder
+          DIRECT_URL: postgresql://placeholder@placeholder/placeholder
           NEXTAUTH_SECRET: placeholder
           NEXTAUTH_URL: http://localhost:3000
           BT_SERVICE_URL: http://placeholder
@@ -50,6 +50,7 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -e ".[dev]"
-      - run: ruff check app
-      - run: mypy app || true
+      - run: ruff check app tests
+      - run: ruff format --check app tests
+      - run: mypy app
       - run: pytest

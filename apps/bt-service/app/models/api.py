@@ -4,15 +4,15 @@ Keep these stable. Internal BT response shapes are messy; we normalise
 them into clean models here.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
 # ----------------------------------------------------------------------
 # Session management
 # ----------------------------------------------------------------------
+
 
 class CookieEntry(BaseModel):
     value: str
@@ -22,8 +22,9 @@ class CookieEntry(BaseModel):
 
 class SessionUploadRequest(BaseModel):
     """The web app posts this to /sessions when an admin refreshes BT cookies."""
+
     cookies: dict[str, CookieEntry]
-    captured_at: datetime = Field(default_factory=datetime.utcnow)
+    captured_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     captured_by_user_id: str
 
 
@@ -37,6 +38,7 @@ class SessionStatus(BaseModel):
 # ----------------------------------------------------------------------
 # Buildertrend domain models (clean versions of BT responses)
 # ----------------------------------------------------------------------
+
 
 class Vendor(BaseModel):
     id: int
@@ -84,7 +86,7 @@ class CreateBillRequest(BaseModel):
     source_extraction_id: str = Field(
         ...,
         description="Stable identifier from the source system, used for "
-                    "idempotency. Same id will not create a duplicate.",
+        "idempotency. Same id will not create a duplicate.",
     )
 
 

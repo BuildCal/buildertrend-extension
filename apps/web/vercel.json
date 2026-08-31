@@ -1,9 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "pnpm db:generate && pnpm build",
-  "framework": "nextjs",
-  "regions": ["syd1"],
-  "github": {
-    "silent": true
-  }
+  "framework": "nextjs"
 }

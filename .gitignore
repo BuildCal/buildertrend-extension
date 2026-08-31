@@ -7,11 +7,15 @@ node_modules/
 out/
 dist/
 build/
+*.tsbuildinfo
 
 # Environment
 .env
 .env.local
 .env.*.local
+.env.development
+.env.production
+.env.bak
 
 # Python
 __pycache__/
@@ -23,12 +27,16 @@ venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+htmlcov/
+.tox/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.code-workspace
 
 # OS
 .DS_Store
@@ -37,6 +45,7 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+pnpm-debug.log*
 
 # Database (local dev)
 *.db
@@ -45,5 +54,12 @@ postgres-data/
 
 # Sensitive — NEVER commit these
 bt_cookies.txt
+cookies.txt
 session.json
 *.har
+*.pem
+*.p12
+
+# Tooling
+.turbo/
+coverage/

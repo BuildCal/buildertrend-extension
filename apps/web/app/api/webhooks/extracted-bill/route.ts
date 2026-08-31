@@ -1,20 +1,20 @@
 /**
  * POST /api/webhooks/extracted-bill
  *
- * Your Claude-based extraction tool POSTs here when it finishes processing
- * a bill PDF. We validate the payload and add it to the review queue.
+ * An extraction tool POSTs here when it finishes processing a bill PDF.
+ * We validate the payload and add it to the review queue.
  *
  * Authentication: shared bearer token in Authorization header.
  * Idempotency: source_extraction_id is the unique key.
  */
+
+import { timingSafeEqual } from "node:crypto";
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
-
-const webhookSecret = process.env.EXTRACTOR_WEBHOOK_SECRET!;
 
 const PayloadSchema = z.object({
   source_extraction_id: z.string().min(1),
@@ -24,19 +24,38 @@ const PayloadSchema = z.object({
   invoice_date: z.string().datetime(),
   amount_total: z.number().positive(),
   pdf_url: z.string().url().nullable().optional(),
-  raw: z.record(z.unknown()), // Keep the full extraction for review/audit
+  raw: z.record(z.unknown()),
 });
 
+function bearerMatches(header: string, secret: string): boolean {
+  const expected = Buffer.from(`Bearer ${secret}`);
+  const actual = Buffer.from(header);
+  if (expected.length !== actual.length) return false;
+  return timingSafeEqual(actual, expected);
+}
+
 export async function POST(req: NextRequest) {
-  // Auth: bearer token
+  const webhookSecret = process.env.EXTRACTOR_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    return NextResponse.json(
+      { error: "webhook is not configured" },
+      { status: 503 }
+    );
+  }
+
   const authHeader = req.headers.get("authorization") ?? "";
-  const expected = `Bearer ${webhookSecret}`;
-  if (authHeader !== expected) {
+  if (!bearerMatches(authHeader, webhookSecret)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  // Validate
-  const parsed = PayloadSchema.safeParse(await req.json());
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid json" }, { status: 400 });
+  }
+
+  const parsed = PayloadSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "validation", issues: parsed.error.issues },
@@ -46,8 +65,6 @@ export async function POST(req: NextRequest) {
 
   const data = parsed.data;
 
-  // Idempotency: if we've seen this source_extraction_id before, return the
-  // existing record rather than creating a duplicate.
   const existing = await prisma.invoice.findUnique({
     where: { sourceExtractionId: data.source_extraction_id },
   });

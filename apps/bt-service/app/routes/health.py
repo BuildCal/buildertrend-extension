@@ -1,4 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
+from sqlalchemy import text
+
+from app.db import engine
 
 router = APIRouter(tags=["health"])
 
@@ -11,5 +14,13 @@ async def healthz() -> dict:
 
 @router.get("/readyz")
 async def readyz() -> dict:
-    """Readiness probe. Add DB connectivity check etc. as it grows."""
+    """Readiness probe — confirms the database is reachable."""
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="database unreachable",
+        ) from exc
     return {"status": "ok"}

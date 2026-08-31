@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     internal_api_token: str = Field(
         ...,
         description="Shared secret between web app and bt-service. "
-                    "Required on every request via X-Internal-Token header.",
+        "Required on every request via X-Internal-Token header.",
     )
 
     # Database
@@ -35,8 +35,8 @@ class Settings(BaseSettings):
     session_encryption_key: str = Field(
         ...,
         description="Fernet key for encrypting BT session cookies in DB. "
-                    "Generate with: python -c 'from cryptography.fernet import Fernet; "
-                    "print(Fernet.generate_key().decode())'",
+        "Generate with: python -c 'from cryptography.fernet import Fernet; "
+        "print(Fernet.generate_key().decode())'",
     )
 
     # Buildertrend
@@ -54,4 +54,5 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    # Required fields are loaded from the environment by pydantic-settings.
+    return Settings()  # type: ignore[call-arg]
