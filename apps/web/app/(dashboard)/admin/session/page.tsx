@@ -4,7 +4,7 @@ import { btService } from "@/lib/bt-service";
 import { uploadCookies } from "./actions";
 
 export default async function SessionRefreshPage() {
-  const session = await auth();
+  await auth();
   let status: Awaited<ReturnType<typeof btService.sessionStatus>> | null = null;
   try {
     status = await btService.sessionStatus();
@@ -17,7 +17,7 @@ export default async function SessionRefreshPage() {
       <div>
         <h1 className="text-2xl font-semibold">Refresh Buildertrend session</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          The team's automation uses your logged-in BT session. Refresh it
+          The team&apos;s automation uses your logged-in BT session. Refresh it
           each morning so bill posting keeps working.
         </p>
       </div>
@@ -53,7 +53,7 @@ export default async function SessionRefreshPage() {
         <ol className="ml-5 list-decimal space-y-3 text-sm">
           <li>
             Open <strong>buildertrend.net</strong> in Chrome and make sure
-            you're logged in.
+            you&apos;re logged in.
           </li>
           <li>
             If not already installed, add the{" "}
@@ -63,13 +63,13 @@ export default async function SessionRefreshPage() {
               rel="noreferrer"
               className="underline"
             >
-              "Get cookies.txt LOCALLY"
+              &quot;Get cookies.txt LOCALLY&quot;
             </a>{" "}
             extension.
           </li>
           <li>
             Click the extension icon while on the Buildertrend tab and{" "}
-            <strong>Export</strong>. You'll get a <code>.txt</code> file.
+            <strong>Export</strong>. You&apos;ll get a <code>.txt</code> file.
           </li>
           <li>Upload that file below.</li>
         </ol>
