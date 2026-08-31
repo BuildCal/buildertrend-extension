@@ -16,7 +16,7 @@
     "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.93.0",
+    "@anthropic-ai/sdk": "^0.122.0",
     "@auth/prisma-adapter": "^2.7.0",
     "@hookform/resolvers": "^3.9.0",
     "@prisma/client": "^5.20.0",
