@@ -1,13 +1,13 @@
 # Buildertrend Gateway
 
-One door between Wattle Court / ViaBuild systems and Buildertrend.
+Unofficial MCP + HTTP gateway for Buildertrend.
 
 Humans and agents work **outside** Buildertrend. This gateway is the only
 process that speaks `buildertrend.net`. Buildertrend stays the **system of
 record** after a successful push. Default every write to **Draft / Not sent**.
 
 ```
-ViaBuild / Xero / Clarum / Grok / Cursor
+Your app / Xero / Grok / Cursor
                  │
                  ▼
         Buildertrend Gateway     ← verbs (jobs.list, variations.saveDraft, …)
@@ -30,15 +30,15 @@ Do **not** start a second MCP per app. Call these verbs.
 | `BT_GATEWAY_ENABLE_SEND` | `false` — no owner email, no `notify-owners`, no invoice Send, no pay, no mark-ready-for-payment, no convert-to-job, no send-to-budget |
 | `dry_run` on writes | `true` until the caller sets `dry_run=false` |
 | New job / lead / contact | also needs `BT_GATEWAY_SANDBOX=true` |
-| GST on change orders | dummy line **4000 GST** (`costCode` **17072421**), 1/11 of **owner** price |
-| Owner-invoice GST | tax group **78952** (not the CO dummy-line pattern) |
+| GST on change orders | dummy line **4000 GST** resolved via Search, 1/11 of **owner** price |
+| Owner-invoice GST | tenant TaxGroups dropdown (not the CO dummy-line pattern) |
 | Secrets | never log `Cookie`, `Authorization`, or login HTML |
 
 On `needsToRelogin: true` or 401 the gateway **stops writes** and returns `auth_required`. It does not loop logins.
 
 ## Attach a signed-in profile
 
-**Dedicated gateway Chrome profile / cookie jar only.** Never the human Wattle Court tab. Session clash already ate saves when both drove the same Chrome profile.
+**Dedicated gateway Chrome profile / cookie jar only.** Never the human daily tab. Session clash already ate saves when both drove the same Chrome profile.
 
 The capture harness **fails closed** unless the profile path contains `bt-gateway` or `gateway-profile`, or the directory has a `.bt-gateway-profile` marker. It also refuses `BT_GATEWAY_HUMAN_PROFILE` if that path is passed as `--profile`.
 
@@ -51,7 +51,7 @@ The capture harness **fails closed** unless the profile path contains `bt-gatewa
 BT_TRANSPORT=sidecar
 BT_SERVICE_URL=http://127.0.0.1:8000
 BT_SERVICE_INTERNAL_TOKEN=...
-BT_BUILDER_ID=110310
+# BT_BUILDER_ID from session.status / GlobalInfo after login
 BT_GATEWAY_ENABLE_SEND=false
 
 # Direct (tests / capture). Never commit the jar.
@@ -72,12 +72,12 @@ pnpm --filter gateway serve    # HTTP :8787
 
 HTTP **requires** `BT_GATEWAY_TOKEN`. Unset or empty token → 401 on every `/v1` route (health stays open). Stdio MCP is local-only.
 
-HTTP (ViaBuild and other apps — same verbs):
+HTTP (your app — same verbs):
 
 ```http
 POST /v1/invoke
 X-BT-Gateway-Token: $BT_GATEWAY_TOKEN
-{ "verb": "jobs.list", "args": { "search": "Kolodong" } }
+{ "verb": "jobs.list", "args": { "search": "example" } }
 
 POST /v1/variations/add-lines
 { "changeOrderId": 123, "dry_run": true, "lines": [ ... ] }

@@ -1,9 +1,5 @@
 import { CONTENT_JSON, CONTENT_MERGE_PATCH, unwrapData } from "./adapter.js";
-import {
-  DRAFT_APPROVAL_STATUS,
-  GST_COST_CODE,
-  OWNER_INVOICE_TAX_GROUP_ID,
-} from "./config.js";
+import { DRAFT_APPROVAL_STATUS } from "./config.js";
 import { GatewayError } from "./errors.js";
 import {
   asRecord,
@@ -140,6 +136,7 @@ registerVerb("session.status", async (ctx) => {
   const globalInfo = await btJson(ctx, { method: "GET", path: "/api/AccountInfo/GlobalInfo" });
   const info = dataOf(globalInfo);
   const builderId = numberish(info.builderId ?? info.BuilderId) ?? ctx.config.builderId;
+  if (builderId) ctx.config.builderId = builderId;
   return {
     authenticated: true,
     builderId,
@@ -425,7 +422,10 @@ registerVerb("variations.deleteLines", async (ctx) => {
 
 registerVerb("variations.recomputeGst", async (ctx) => {
   const provided = Array.isArray(ctx.args.lines) ? (ctx.args.lines as VariationLineLike[]) : undefined;
-  if (provided) return recomputeGstDummyLine(provided);
+  if (provided) {
+    const costCode = numberish(ctx.args.costCode) ?? (await resolveGstCostCode(ctx, optionalJob(ctx)));
+    return recomputeGstDummyLine(provided, costCode);
+  }
   const changeOrderId = requireNumber(ctx.args, "changeOrderId");
   return applyGst(ctx, changeOrderId);
 });
@@ -679,11 +679,13 @@ async function resolveGstCostCode(ctx: VerbContext, jobId?: number): Promise<num
     });
     const found = pickGstCostCodeFromSearch(payload);
     if (found) return found;
-  } catch {
-    // Search is best-effort; this builder still has the observed fallback id.
+  } catch (err) {
+    if (err instanceof GatewayError && err.code !== "bt_error") throw err;
   }
-  console.error("[gst] 4000 GST search missed; falling back to costCode 17072421 for this builder");
-  return GST_COST_CODE;
+  throw new GatewayError(
+    "tax_engine_unusable",
+    "Could not resolve the 4000 GST cost code via Search. Use the job's tax setup — do not hard-code a cost code.",
+  );
 }
 
 async function refreshVariationSync(ctx: VerbContext, changeOrderId: number, current?: unknown): Promise<unknown> {
@@ -774,8 +776,6 @@ function billGridBody(ctx: VerbContext): Record<string, unknown> {
     jobIds: jobIdsFrom(ctx.args),
   };
 }
-
-export const OWNER_INVOICE_TAX_GROUP = OWNER_INVOICE_TAX_GROUP_ID;
 
 export function registerAllVerbs(): void {
   // Importing this module registers handlers via registerVerb().

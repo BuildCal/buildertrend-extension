@@ -34,7 +34,7 @@ function intEnv(name: string, fallback: number): number {
 export function loadConfig(overrides: Partial<GatewayConfig> = {}): GatewayConfig {
   const transport = (process.env.BT_TRANSPORT ?? "sidecar") as TransportKind;
   return {
-    builderId: intEnv("BT_BUILDER_ID", 110310),
+    builderId: intEnv("BT_BUILDER_ID", 0),
     baseUrl: (process.env.BT_BASE_URL ?? "https://buildertrend.net").replace(/\/$/, ""),
     enableSend: boolEnv("BT_GATEWAY_ENABLE_SEND", false),
     sandbox: boolEnv("BT_GATEWAY_SANDBOX", false),
@@ -55,8 +55,6 @@ export function loadConfig(overrides: Partial<GatewayConfig> = {}): GatewayConfi
   };
 }
 
-export const OWNER_INVOICE_TAX_GROUP_ID = 78952;
-export const GST_COST_CODE = 17072421;
 export const GST_LINE_TITLE = "[GST001] GST on Total Owner Price";
 export const GST_UNIT_COST = 0.1;
 export const GST_PAGE_TYPE_ENUM = 6;

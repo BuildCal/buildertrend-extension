@@ -6,7 +6,7 @@ describe("command log", () => {
     const { store, invoke } = createHarness();
     await invoke("variations.saveDraftHeader", {
       changeOrderId: 7,
-      header: { title: "Kolodong extra", cookie: "SHOULD_NOT_APPEAR" },
+      header: { title: "Draft extra", cookie: "SHOULD_NOT_APPEAR" },
     });
     expect(store.commands).toHaveLength(1);
     const row = store.commands[0]!;

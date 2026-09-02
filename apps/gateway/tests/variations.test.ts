@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { CONTENT_JSON, CONTENT_MERGE_PATCH } from "../src/adapter.js";
-import { GST_COST_CODE, GST_LINE_TITLE } from "../src/config.js";
+import { GST_LINE_TITLE } from "../src/config.js";
+
+const FAKE_GST_COST_CODE = 99999;
+
+function gstSearchResponse() {
+  return {
+    status: 200,
+    contentType: CONTENT_JSON,
+    json: { success: true, data: { results: [{ title: "4000 GST", costCode: FAKE_GST_COST_CODE }] } },
+  };
+}
 import { createHarness } from "./helpers.js";
 
 function variationGet(lines: unknown[]) {
@@ -31,6 +41,7 @@ describe("variation draft + GST recompute", () => {
       { id: 1, title: "Tile extra", ownerPrice: 2000, builderCost: 800 },
     ];
     const { calls, invoke } = createHarness(async (req) => {
+      if (req.path.includes("/api/Search")) return gstSearchResponse();
       if (req.path.includes("changeOrder") && req.method === "GET") return variationGet(lines);
       if (req.path.includes("add-change-order-line-items")) {
         const body = req.json as { lineItems: Record<string, unknown>[] };
@@ -61,7 +72,7 @@ describe("variation draft + GST recompute", () => {
     expect(dummyCall).toBeTruthy();
     const dummy = (dummyCall!.json as { lineItems: { costCode: number; quantity: number; taxGroupId: null }[] })
       .lineItems[0]!;
-    expect(dummy.costCode).toBe(GST_COST_CODE);
+    expect(dummy.costCode).toBe(FAKE_GST_COST_CODE);
     expect(dummy.quantity).toBe(5000);
     expect(dummy.taxGroupId).toBeNull();
     expect(dummyCall!.contentType ?? CONTENT_JSON).toBe(CONTENT_JSON);
@@ -71,9 +82,10 @@ describe("variation draft + GST recompute", () => {
   it("updates an existing GST dummy instead of adding another", async () => {
     const lines = [
       { id: 1, title: "Real", ownerPrice: 1000 },
-      { id: 2, title: GST_LINE_TITLE, costCode: GST_COST_CODE, quantity: 10, unitCost: 0.1 },
+      { id: 2, title: GST_LINE_TITLE, costCode: FAKE_GST_COST_CODE, quantity: 10, unitCost: 0.1 },
     ];
     const { calls, invoke } = createHarness(async (req) => {
+      if (req.path.includes("/api/Search")) return gstSearchResponse();
       if (req.method === "GET") return variationGet(lines);
       return { status: 200, contentType: CONTENT_JSON, json: { success: true, data: {} } };
     });

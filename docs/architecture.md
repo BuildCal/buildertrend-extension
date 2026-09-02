@@ -6,7 +6,7 @@ you're tempted to refactor.
 ## 0. One gateway (TypeScript verbs)
 
 **Decision:** All Buildertrend reads and writes go through `apps/gateway`.
-MCP tools and HTTP `/v1` are the same verbs. ViaBuild, Xero helpers, Clarum,
+MCP tools and HTTP `/v1` are the same verbs. Your app, accounting helpers,
 and agents must not each scrape Buildertrend.
 
 **Why:** If Buildertrend changes a URL, only the adapter changes. The office

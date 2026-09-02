@@ -1,9 +1,4 @@
-import {
-  GST_COST_CODE,
-  GST_LINE_TITLE,
-  GST_PAGE_TYPE_ENUM,
-  GST_UNIT_COST,
-} from "./config.js";
+import { GST_LINE_TITLE, GST_PAGE_TYPE_ENUM, GST_UNIT_COST } from "./config.js";
 
 export interface VariationLineLike {
   id?: number | string | null;
@@ -40,7 +35,6 @@ export const GST_ADD_FORBIDDEN_FIELDS = [
 export function isGstDummyLine(line: VariationLineLike): boolean {
   const title = `${line.title ?? ""} ${line.itemTitle ?? ""}`;
   if (title.includes("[GST001]") || /4000\s*GST/i.test(title)) return true;
-  if (line.costCode === GST_COST_CODE) return true;
   return false;
 }
 
@@ -76,10 +70,7 @@ export function inclusiveFromExclusive(exclusiveOwnerPrice: number): number {
   return roundMoney(exclusiveOwnerPrice + gstFromExclusiveOwnerPrice(exclusiveOwnerPrice));
 }
 
-export function buildGstDummyLine(
-  exclusiveOwnerPrice: number,
-  costCode: number = GST_COST_CODE,
-): GstDummyLine {
+export function buildGstDummyLine(exclusiveOwnerPrice: number, costCode: number): GstDummyLine {
   return {
     costCode,
     title: GST_LINE_TITLE,
@@ -113,7 +104,7 @@ export function pickGstCostCodeFromSearch(payload: unknown): number | undefined 
 
 export function recomputeGstDummyLine(
   lines: VariationLineLike[],
-  costCode: number = GST_COST_CODE,
+  costCode: number,
 ): {
   exclusiveOwnerPrice: number;
   gstAmount: number;
@@ -143,9 +134,9 @@ export function roundMoney(value: number): number {
 }
 
 export function ownerInvoiceCustomId(jobNumber: string, sequence: number): string {
-  const digits = jobNumber.replace(/\D/g, "").padStart(4, "0").slice(-4);
+  const slug = jobNumber.replace(/[^A-Za-z0-9]/g, "").toUpperCase() || "JOB";
   const seq = String(sequence).padStart(4, "0");
-  return `INV-NMC${digits}-${seq}`;
+  return `INV-${slug}-${seq}`;
 }
 
 export function isDuplicateInvoiceMessage(message: string | undefined): boolean {

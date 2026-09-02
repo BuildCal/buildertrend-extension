@@ -78,7 +78,7 @@ pnpm db:seed -- admin@yourcompany.com
 
 It generates a random password and prints it. Change it after first login.
 
-## 6. Run the gateway (preferred for agents and ViaBuild)
+## 6. Run the gateway (preferred for agents and your app)
 
 The TypeScript gateway is the single verb layer. After `bt-service` is up
 with a captured session:

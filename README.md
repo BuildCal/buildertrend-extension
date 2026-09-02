@@ -1,11 +1,11 @@
 # Buildertrend Gateway
 
-One door between Wattle Court / ViaBuild and Buildertrend. Humans and agents
-do the work **outside** Buildertrend. Buildertrend stays the **system of
-record** (the copy the office, owners, and franchise still see).
+Unofficial MCP + HTTP gateway for Buildertrend. Humans and agents do the
+work **outside** Buildertrend. Buildertrend stays the **system of record**
+(the copy the office still sees).
 
 This repository also contains the older bill-review web app. New callers
-(ViaBuild, Grok, Cursor) must use the **gateway verbs**, not scrape
+(your app, Grok, Cursor) must use the **gateway verbs**, not scrape
 `buildertrend.net` themselves.
 
 > **Unofficial.** Not affiliated with, endorsed by, or supported by Buildertrend.
@@ -72,7 +72,8 @@ pnpm --filter gateway serve    # HTTP :8787
 Attach a **dedicated gateway Chrome profile** (not a human daily profile). See
 [apps/gateway/README.md](apps/gateway/README.md).
 
-Builder id defaults to the observed Wattle Court Mid-Coast tenant **110310**.
+Builder id comes from `session.status` / GlobalInfo after login. Do not
+hard-code a tenant id.
 
 ## Bill-review web app (existing)
 
@@ -99,9 +100,8 @@ Invoice extraction, PO matching, and a human review queue still live in
 - No payments, no Xero pay, no “mark ready for payment” unless flagged
 - No new real contact/lead/job without `dry_run=false` **and** sandbox
 - Do not store credentials in git, MCP logs, or issue comments
-- Change-order GST is a dummy line (1/11 of **owner** price). Do not use the native CO tax engine
-- Bades = project expenses only. Never workers comp / icare / tax / payroll through BT
-- Team-facing agents must not dump cash/P&L at Eli/Andrew/Bades/Tori
+- Change-order GST is a dummy line (1/11 of **owner** price), resolved via Search (`4000 GST`). Do not use the native CO tax engine
+- Project expenses only through bills/POs. Never workers comp / tax / payroll through BT
 
 ## License
 

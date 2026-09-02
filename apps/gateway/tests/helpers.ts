@@ -6,6 +6,7 @@ import "../src/verbs.js";
 
 export function testConfig(overrides: Partial<GatewayConfig> = {}): GatewayConfig {
   return loadConfig({
+    builderId: 99999,
     transport: "direct",
     defaultDryRun: true,
     enableSend: false,

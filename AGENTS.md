@@ -61,9 +61,8 @@ Locks you must keep:
 - Do not enable send. Do not merge PRs. Do not touch live Buildertrend except
   through this gateway after the user has signed in
 
-`BT_BUILDER_ID` default **110310** is **Wattle Court Mid-Coast only**. Other
-users get builder id from `session.status` / GlobalInfo after login. Do not
-hard-code 110310 for a different tenant.
+Leave `BT_BUILDER_ID` unset. Read builder id from `session.status` /
+GlobalInfo after login. Never hard-code a tenant id.
 
 ## Playbook
 
@@ -132,9 +131,8 @@ BT_SERVICE_URL=http://127.0.0.1:8000
 BT_SERVICE_INTERNAL_TOKEN=<same value you generated>
 ```
 
-Sidecar transport is preferred. Leave `BT_BUILDER_ID` unset or placeholder
-until GlobalInfo returns the real id. Do not copy 110310 onto another
-builder.
+Sidecar transport is preferred. Leave `BT_BUILDER_ID` unset until
+GlobalInfo returns the signed-in builder id.
 
 HTTP `/v1` fails closed without `BT_GATEWAY_TOKEN`. You still generate it
 so `pnpm --filter gateway serve` can work later. Stdio MCP does not use
@@ -207,8 +205,8 @@ Example:
 
 - **command:** `pnpm`
 - **args:** `["--dir", "<absolute-path-to-this-repo>", "--filter", "gateway", "mcp"]`
-- **env** (from the `.env` you wrote; do not hard-code 110310 for other
-  tenants):
+- **env** (from the `.env` you wrote; builder id from GlobalInfo after
+  login, never a hard-coded tenant):
 
   - `BT_TRANSPORT=sidecar`
   - `BT_SERVICE_URL=http://127.0.0.1:8000`
@@ -237,7 +235,7 @@ Do not scrape `buildertrend.net` yourself. Only this gateway.
 
 In plain language:
 
-- They work in **Grok Bot** / ViaBuild
+- They work in **Grok Bot** / their own app
 - Buildertrend is the **record** after a draft push
 - Send / pay / notify stay **locked** (`BT_GATEWAY_ENABLE_SEND=false`)
 - Writes default to **dry_run**; a real draft needs an explicit
@@ -250,7 +248,7 @@ In plain language:
 - Never scrape `buildertrend.net` outside this gateway
 - Never dual-drive their daily Buildertrend tab
 - Never enable send
-- Never merge pull requests (Brad merges)
+- Never merge pull requests (the repo owner merges)
 - Never commit `.env`, cookie jars, tokens, or HAR files
 - Never invent a catalog “Buildertrend” connector
 

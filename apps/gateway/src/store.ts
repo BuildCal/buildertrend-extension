@@ -129,11 +129,13 @@ export class PostgresStore implements GatewayStore {
   constructor(private readonly pool: PgClient) {}
 
   async logCommand(entry: Omit<CommandLogEntry, "id" | "createdAt">): Promise<CommandLogEntry> {
+    const commandId = id("cmd");
     const result = await this.pool.query(
-      `INSERT INTO bt_command_log (verb, "dryRun", "payloadSummary", "btStatus", "errorCode")
-       VALUES ($1, $2, $3::jsonb, $4, $5)
+      `INSERT INTO bt_command_log (id, verb, "dryRun", "payloadSummary", "btStatus", "errorCode")
+       VALUES ($1, $2, $3, $4::jsonb, $5, $6)
        RETURNING id, verb, "dryRun", "payloadSummary", "btStatus", "errorCode", "createdAt"`,
       [
+        commandId,
         entry.verb,
         entry.dryRun,
         JSON.stringify(summarizePayload(entry.payloadSummary)),
@@ -190,8 +192,8 @@ export class PostgresStore implements GatewayStore {
 
   async setSyncState(state: SyncState): Promise<void> {
     await this.pool.query(
-      `INSERT INTO bt_sync_state ("entityType", "externalId", "lastPulledHash", "lastPulledAt", "lastPushedAt", "lastError", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      `INSERT INTO bt_sync_state (id, "entityType", "externalId", "lastPulledHash", "lastPulledAt", "lastPushedAt", "lastError", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
        ON CONFLICT ("entityType", "externalId") DO UPDATE SET
          "lastPulledHash" = EXCLUDED."lastPulledHash",
          "lastPulledAt" = EXCLUDED."lastPulledAt",
@@ -199,6 +201,7 @@ export class PostgresStore implements GatewayStore {
          "lastError" = EXCLUDED."lastError",
          "updatedAt" = NOW()`,
       [
+        id("sync"),
         state.entityType,
         state.externalId,
         state.lastPulledHash ?? null,

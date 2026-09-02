@@ -1,8 +1,7 @@
 # Buildertrend API map — used-module overnight pass
 
-Unofficial internal routes for the Wattle Court gateway.
-Org: **Caldon Homes Pty Ltd t/as Wattle Court Mid-Coast**. Observed `builderId` **110310**.
-Host: `https://buildertrend.net`.
+Unofficial internal routes for the Buildertrend gateway.
+Host: `https://buildertrend.net`. Builder id comes from GlobalInfo after login.
 
 Do not commit HAR files, cookies, `Authorization`, or `Cookie` values.
 `useSession=` on a query string is a **boolean flag**, not a secret.
@@ -32,7 +31,7 @@ All other writes below are **not_captured**. Do not invent them.
 | `jobs.picker.select` | POST | `/api/jobpicker/SetJobPickerData` | **Fired.** Required before most job-scoped grids |
 | `jobs.picker.existing` | GET | `/api/jobpicker/GetExistingJobList` | |
 
-Dedicated **gateway** Chrome profile / cookie jar only. Never dual-drive the human Wattle Court tab.
+Dedicated **gateway** Chrome profile / cookie jar only. Never dual-drive the human daily tab.
 
 ---
 
@@ -69,7 +68,7 @@ Only Sales surface we use. Related URLs (`/app/leads/activities`, map, calendar,
 | --- | --- | --- | --- |
 | `contacts.list` | POST | `/api/Contacts/Grid` | Captured |
 | `contacts.get` | GET | `/api/Contacts/{id}/Details` | Captured. `id=0` = add form |
-| `contacts.create` / `update` | | | **not_captured**. Brad’s go. Gateway takes this over from Bades |
+| `contacts.create` / `update` | | | **not_captured**. Capture a sandbox contact Save |
 
 ---
 
@@ -83,19 +82,19 @@ UI: `/app/OwnerInvoices`, `/app/OwnerInvoices/OwnerInvoice/{invoiceId}/{jobId}/f
 | `invoices.get` | GET | `/apix/v3/Invoices/get-invoice?invoiceId=&job=` | Captured |
 | `invoices.accountingStatus` | GET | `/api/accounting/GetEntityAccountingStatus?...entityType=3` | Captured |
 | `invoices.changes` | GET | `/apix/v2/EntityChangeTracking/entity-changes` | Captured |
-| `invoices.saveDraft` | | Save was **not** in the DOM on the Ranchlands draft tab | **not_captured** |
+| `invoices.saveDraft` | | Save was **not** in the DOM on the observed draft tab | **not_captured** |
 | `invoices.addLines` | | JS: `/api/LineItems/EntityAttachmentsToInvoice` | **not_captured** |
 | `invoices.send` | | | **send_disabled** |
 
 Custom invoice # must be unique per jobsite. Toast: `The Custom Invoice # has already been used for this jobsite`. ID input is flaky — re-read before save.
 
-**GST on owner invoices (not COs):** tax group **78952** (GST 10%) when the tax engine is on. Confirm `GET /api/TaxGroups/Dropdown`. This is **not** the change-order dummy-line pattern.
+**GST on owner invoices (not COs):** use the tenant’s tax group from `GET /api/TaxGroups/Dropdown` when the tax engine is on. This is **not** the change-order dummy-line pattern.
 
 ---
 
 ## Change orders / variations
 
-Most complete writes. Kolodong pattern.
+Most complete writes. Dummy-line GST pattern.
 
 | Verb | Method | Path | Content-Type | Status |
 | --- | --- | --- | --- | --- |
@@ -110,15 +109,15 @@ Most complete writes. Kolodong pattern.
 
 ### GST rule (locked) + restore
 
-Native tax **does not persist** on observed COs (`effectiveTaxVersion=0`, `taxGroupId` null). `POST .../bulk-update-tax-rate` → **500**. Tax group **78952** does **not** persist on change orders. Do not send `taxGroupId: -1`. Gateway returns `tax_engine_unusable` if asked to use the native engine.
+Native tax **does not persist** on observed COs (`effectiveTaxVersion=0`, `taxGroupId` null). `POST .../bulk-update-tax-rate` → **500**. Do not send a hard-coded tax group on change orders. Do not send `taxGroupId: -1`. Gateway returns `tax_engine_unusable` if asked to use the native engine or if Search cannot resolve **4000 GST**.
 
 GST is a **dummy line**:
 
-- Cost code title **4000 GST**. Field is `costCode` (observed numeric id **17072421**), **not** `costCodeId`
-- Resolve via `POST /api/Search?limit=10` `{search:"4000 GST", jobIds, categories:[30]}` before add. Fallback `17072421` only after search misses (this builder)
+- Cost code title **4000 GST**. Field is `costCode` (numeric id from Search), **not** `costCodeId`
+- Resolve via `POST /api/Search?limit=10` `{search:"4000 GST", jobIds, categories:[30]}` before add. Do not hard-code a cost code
 - Title `[GST001] GST on Total Owner Price`
 - `unitCost` `0.10`, `quantity` = **exclusive owner price** of the real lines (1/11 of GST-inclusive total)
-- Kolodong check: exclusive **2039.50** → GST **203.95** → inclusive **2243.45**. Never builder cost
+- Example fixture: exclusive **1100.00** → GST **110.00** → inclusive **1210.00**. Never builder cost
 - `taxGroupId`: **null**
 - `pageTypeEnum`: **6**
 - Do **not** send `costCodeId`, `costItemId`, `lineItemType`, `itemTitle`, `markupColumn` on add (those 500)

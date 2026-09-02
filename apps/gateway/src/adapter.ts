@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { GatewayError } from "./errors.js";
+import { ERROR_CODES, GatewayError, type ErrorCode } from "./errors.js";
 import type { GatewayConfig } from "./config.js";
 import { looksLikeLoginHtml, redactHeaders, redactUrl, safeErrorSnippet } from "./redact.js";
 
@@ -186,19 +186,20 @@ export class SidecarAdapter implements BtAdapter {
     const text = await res.text();
     let payload: Record<string, unknown> = {};
     try {
-      payload = JSON.parse(text) as Record<string, unknown>;
-    } catch {
+      payload = unwrapSidecarPayload(JSON.parse(text) as Record<string, unknown>);
+    } catch (err) {
+      if (err instanceof GatewayError) throw err;
       throw new GatewayError("bt_error", "Sidecar returned non-JSON", {
         status: res.status,
         snippet: safeErrorSnippet(text),
       });
     }
-    if (payload.error === "auth_required" || payload.ok === false && payload.error === "auth_required") {
+    if (payload.error === "auth_required" || (payload.ok === false && payload.error === "auth_required")) {
       throw new GatewayError("auth_required", String(payload.message ?? "auth_required"));
     }
     if (!res.ok && payload.error) {
       throw new GatewayError(
-        (payload.error as "bt_error") ?? "bt_error",
+        sidecarErrorCode(payload.error),
         String(payload.message ?? "sidecar error"),
         { status: res.status },
       );
@@ -320,6 +321,22 @@ export function logAdapterRequest(req: BtRequest): void {
     headers: redactHeaders({ "content-type": contentTypeFor(req) }),
   };
   console.error(`[bt-adapter] ${safe.method} ${safe.path} (${safe.contentType})`);
+}
+
+/** FastAPI HTTPException wraps `{error, message}` in `detail`. */
+export function unwrapSidecarPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  const detail = payload.detail;
+  if (detail && typeof detail === "object" && !Array.isArray(detail)) {
+    return { ...payload, ...(detail as Record<string, unknown>) };
+  }
+  return payload;
+}
+
+function sidecarErrorCode(value: unknown): ErrorCode {
+  if (typeof value === "string" && (ERROR_CODES as readonly string[]).includes(value)) {
+    return value as ErrorCode;
+  }
+  return "bt_error";
 }
 
 export function unwrapData(payload: unknown): unknown {

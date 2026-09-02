@@ -96,7 +96,7 @@ export const VERBS: VerbSpec[] = [
     discovery: {
       ui: "/app/JobPage/0/1?openCondensed=true",
       click: "Fill a clearly fake sandbox job, Save. JS backlog mentions /api/jobsites/Add and /api/jobsites/DefaultInfo.",
-      sandboxHint: "Job Brad names. Never a live client job.",
+      sandboxHint: "Sandbox job the operator names. Never a live client job.",
       expectedPaths: ["/api/jobsites/Add", "/api/jobsites/DefaultInfo"],
     },
   },
@@ -112,7 +112,7 @@ export const VERBS: VerbSpec[] = [
     discovery: {
       ui: "/app/JobPage/{jobId}/1",
       click: "Change a dummy field on a sandbox job, Save, then revert.",
-      sandboxHint: "Sandbox job Brad names.",
+      sandboxHint: "Sandbox job the operator names.",
       expectedPaths: ["/api/jobsites/"],
     },
   },
@@ -154,8 +154,8 @@ export const VERBS: VerbSpec[] = [
     description: "Create a lead. Must capture. Do not submit leftover /Lead/0 tabs.",
     discovery: {
       ui: "/app/leads (Lead Opportunities add form from Defaults)",
-      click: "Fill Defaults, save a clearly fake lead Brad approves. Do not submit the leftover /Lead/0 tab from 2026-09-02.",
-      sandboxHint: "Fake lead Brad approves.",
+      click: "Fill Defaults, save a clearly fake sandbox lead. Do not submit leftover /Lead/0 tabs.",
+      sandboxHint: "Fake lead the operator approves.",
       expectedPaths: ["/api/Leads", "/api/Leads/{id}"],
     },
   },
@@ -171,7 +171,7 @@ export const VERBS: VerbSpec[] = [
     discovery: {
       ui: "/app/leads/{id}",
       click: "Edit one field on a sandbox lead, Save, revert.",
-      sandboxHint: "Fake lead Brad approves.",
+      sandboxHint: "Fake lead the operator approves.",
       expectedPaths: ["/api/Leads", "/api/Leads/{id}"],
     },
   },
@@ -183,11 +183,11 @@ export const VERBS: VerbSpec[] = [
     kind: "send",
     captured: false,
     sandboxRequired: true,
-    description: "Creates a real job. Forbidden until Brad enables send and create works.",
+    description: "Creates a real job. Forbidden until send is enabled and create is captured.",
     discovery: {
       ui: "Lead detail — Convert to Job (canConvertToJob on GET)",
-      click: "Do not click until Brad enables this named tool.",
-      sandboxHint: "Creates a real job — Brad only.",
+      click: "Do not click until this named send tool is enabled.",
+      sandboxHint: "Creates a real job — send-locked.",
       expectedPaths: ["/api/Leads/", "convert"],
     },
   },
@@ -217,11 +217,11 @@ export const VERBS: VerbSpec[] = [
     kind: "write",
     captured: false,
     sandboxRequired: true,
-    description: "Create a contact. Humans (Bades) used to add these in BT — gateway takes that over after capture.",
+    description: "Create a contact. Capture the POST before implementing.",
     discovery: {
       ui: "Contacts add form (GET /api/Contacts/0/Details)",
-      click: "Brad's go — add one sandbox contact, Save.",
-      sandboxHint: "Fake contact Brad approves. Do not invent the POST.",
+      click: "Add one sandbox contact, Save.",
+      sandboxHint: "Fake contact the operator approves. Do not invent the POST.",
       expectedPaths: ["/api/Contacts"],
     },
   },
@@ -287,10 +287,10 @@ export const VERBS: VerbSpec[] = [
     description: "Save owner-invoice draft. Path still unknown — do not guess. Never Send.",
     discovery: {
       ui: "/app/OwnerInvoices/OwnerInvoice/{invoiceId}/{jobId}/false",
-      click: "Open a real draft (e.g. NMC0021 0003 or NMC0050 0007). Capture Save without Send. Re-read custom invoice # before save — the input is flaky.",
-      sandboxHint: "Ranchlands 0003 or Bayview 0007. Leave Not sent.",
+      click: "Open a sandbox owner-invoice draft. Capture Save without Send. Re-read custom invoice # before save — the input is flaky.",
+      sandboxHint: "Sandbox draft. Leave Not sent.",
       expectedPaths: ["some invoice save PUT — unstable in prior notes"],
-      notes: "Custom invoice # must be unique per jobsite. GST tax group 78952 when the tax engine is on — not the CO dummy-line pattern.",
+      notes: "Custom invoice # must be unique per jobsite. Owner-invoice GST uses the tenant TaxGroups dropdown when the tax engine is on — not the change-order dummy-line pattern.",
     },
   },
   {
@@ -318,7 +318,7 @@ export const VERBS: VerbSpec[] = [
     description: "Email/send an owner invoice. Forbidden default.",
     discovery: {
       ui: "Owner invoice — Send",
-      click: "Do not click. Separate tool, Brad-locked.",
+      click: "Do not click. Separate send-locked tool.",
       sandboxHint: "Never on a live owner invoice.",
       expectedPaths: [],
     },
@@ -406,7 +406,7 @@ export const VERBS: VerbSpec[] = [
     discovery: {
       ui: "Change Orders — add new on a sandbox job",
       click: "Open new CO so Defaults + create-draft fire. Leave Draft.",
-      sandboxHint: "Kolodong-style draft or job Brad names.",
+      sandboxHint: "Sandbox change-order draft.",
       expectedPaths: [
         "/api/ChangeOrders/Defaults",
         "/apix/v2/ChangeOrders/{id}/create-draft",
@@ -478,7 +478,7 @@ export const VERBS: VerbSpec[] = [
       ui: "Bills — add on a sandbox job",
       click:
         "Create a sandbox project-expense draft, Save. Do not mark ready for payment. Never workers comp / icare / tax / payroll.",
-      sandboxHint: "Project expense only. Bades scope.",
+      sandboxHint: "Project expense only.",
       expectedPaths: ["/api/v1/bills"],
     },
   },
@@ -504,10 +504,10 @@ export const VERBS: VerbSpec[] = [
     httpMethod: "POST",
     kind: "send",
     captured: false,
-    description: "canMarkReadyForPayment exists. Do not call unless Brad enables this tool. Xero pays.",
+    description: "canMarkReadyForPayment exists. Do not call unless this send tool is enabled. Pay from your accounting system.",
     discovery: {
       ui: "Bill — Mark ready for payment",
-      click: "Do not click. Xero is the pay path.",
+      click: "Do not click. Pay from the accounting system, not Buildertrend.",
       sandboxHint: "Never.",
       expectedPaths: [],
     },
@@ -568,7 +568,7 @@ export const VERBS: VerbSpec[] = [
     discovery: {
       ui: "Purchase Orders — add on a sandbox job",
       click: "Create a draft PO for a project expense, Save. Do not approve.",
-      sandboxHint: "Bades / project expenses only.",
+      sandboxHint: "Project expenses only.",
       expectedPaths: ["/api/PurchaseOrders"],
     },
   },
@@ -607,7 +607,7 @@ export const VERBS: VerbSpec[] = [
     discovery: {
       ui: "Estimate worksheet on a sandbox job that is not locked",
       click: "Edit one line, Save. Confirm worksheetLocked is false. Do not send to budget.",
-      sandboxHint: "Andrew estimating sandbox.",
+      sandboxHint: "Unlocked estimating sandbox.",
       expectedPaths: ["/apix/v2/LineItems/update-estimate-line-item"],
     },
   },
@@ -636,7 +636,7 @@ export const VERBS: VerbSpec[] = [
     description: "isSentToBudget. Named tool, default off.",
     discovery: {
       ui: "Estimate — send to budget",
-      click: "Do not click unless Brad enables this tool.",
+      click: "Do not click unless this named send tool is enabled.",
       sandboxHint: "Budget lock can hurt jobs.",
       expectedPaths: [],
     },

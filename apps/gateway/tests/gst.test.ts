@@ -11,23 +11,25 @@ import {
   pickGstCostCodeFromSearch,
   recomputeGstDummyLine,
 } from "../src/gst.js";
-import { GST_COST_CODE, GST_LINE_TITLE } from "../src/config.js";
+import { GST_LINE_TITLE } from "../src/config.js";
+
+const FAKE_GST_COST_CODE = 99999;
 
 describe("GST dummy-line math", () => {
-  it("uses owner price, never builder cost (Kolodong plumbing bug)", () => {
+  it("uses owner price, never builder cost", () => {
     const lines = [
-      { title: "Plumbing extra", ownerPrice: 2039.5, builderCost: 9999, quantity: 1, unitCost: 9999 },
+      { title: "Plumbing extra", ownerPrice: 1100, builderCost: 9999, quantity: 1, unitCost: 9999 },
     ];
-    expect(ownerPriceOfRealLines(lines)).toBe(2039.5);
-    expect(gstFromExclusiveOwnerPrice(2039.5)).toBe(203.95);
-    expect(inclusiveFromExclusive(2039.5)).toBe(2243.45);
-    expect(gstFromInclusiveOwnerTotal(2243.45)).toBe(203.95);
+    expect(ownerPriceOfRealLines(lines)).toBe(1100);
+    expect(gstFromExclusiveOwnerPrice(1100)).toBe(110);
+    expect(inclusiveFromExclusive(1100)).toBe(1210);
+    expect(gstFromInclusiveOwnerTotal(1210)).toBe(110);
   });
 
   it("quantity is exclusive owner price; unitCost is 0.10", () => {
-    const dummy = buildGstDummyLine(2500);
+    const dummy = buildGstDummyLine(2500, FAKE_GST_COST_CODE);
     expect(dummy).toEqual({
-      costCode: GST_COST_CODE,
+      costCode: FAKE_GST_COST_CODE,
       title: GST_LINE_TITLE,
       unitCost: 0.1,
       quantity: 2500,
@@ -38,10 +40,13 @@ describe("GST dummy-line math", () => {
   });
 
   it("ignores the existing GST dummy when summing owner price", () => {
-    const computed = recomputeGstDummyLine([
-      { title: "Deck", ownerPrice: 1000 },
-      { id: 99, title: GST_LINE_TITLE, costCode: GST_COST_CODE, quantity: 50, unitCost: 0.1 },
-    ]);
+    const computed = recomputeGstDummyLine(
+      [
+        { title: "Deck", ownerPrice: 1000 },
+        { id: 99, title: GST_LINE_TITLE, costCode: FAKE_GST_COST_CODE, quantity: 50, unitCost: 0.1 },
+      ],
+      FAKE_GST_COST_CODE,
+    );
     expect(computed.exclusiveOwnerPrice).toBe(1000);
     expect(computed.gstAmount).toBe(100);
     expect(computed.existingGstLineId).toBe(99);
@@ -56,7 +61,7 @@ describe("GST dummy-line math", () => {
   it("rejects forbidden add-line fields", () => {
     expect(
       assertNoForbiddenGstAddFields({
-        costCode: GST_COST_CODE,
+        costCode: FAKE_GST_COST_CODE,
         title: GST_LINE_TITLE,
         costCodeId: 1,
         itemTitle: "nope",
@@ -64,9 +69,9 @@ describe("GST dummy-line math", () => {
     ).toEqual(["costCodeId", "itemTitle"]);
   });
 
-  it("identifies dummy lines by title or cost code", () => {
+  it("identifies dummy lines by title", () => {
     expect(isGstDummyLine({ title: "[GST001] GST on Total Owner Price" })).toBe(true);
-    expect(isGstDummyLine({ costCode: GST_COST_CODE })).toBe(true);
+    expect(isGstDummyLine({ title: "4000 GST" })).toBe(true);
     expect(isGstDummyLine({ title: "Plumbing" })).toBe(false);
   });
 
@@ -78,8 +83,8 @@ describe("GST dummy-line math", () => {
     ).toBe(42);
   });
 
-  it("builds the Wattle Court owner-invoice custom id pattern", () => {
-    expect(ownerInvoiceCustomId("NMC0021", 3)).toBe("INV-NMC0021-0003");
-    expect(ownerInvoiceCustomId("50", 7)).toBe("INV-NMC0050-0007");
+  it("builds a generic owner-invoice custom id from the job number", () => {
+    expect(ownerInvoiceCustomId("JOB99", 3)).toBe("INV-JOB99-0003");
+    expect(ownerInvoiceCustomId("9999", 7)).toBe("INV-9999-0007");
   });
 });

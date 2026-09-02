@@ -20,7 +20,7 @@ Treat a deployed instance as production.
 
 **Do not open a public GitHub issue for security reports.**
 
-Email **brad@caldongroup.com** with:
+Open a **private GitHub security advisory** on this repository with:
 
 - A description of the issue and its impact
 - Steps to reproduce, or a proof of concept against a local/dev instance

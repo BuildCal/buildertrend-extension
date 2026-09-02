@@ -90,8 +90,8 @@ When the agent says you are done, ask something small:
 - “List my jobs”
 - “Get variation …” (use a real id or title you already know)
 
-You work in **Grok Bot** (or ViaBuild). Buildertrend stays the office copy
-after a draft is pushed. Send and pay stay locked. Some writes are not
+You work in **Grok Bot** (or your own app). Buildertrend stays the office
+copy after a draft is pushed. Send and pay stay locked. Some writes are not
 wired yet; the agent will say `not_captured` instead of guessing.
 
 ## What you should not do
@@ -100,7 +100,7 @@ wired yet; the agent will say `not_captured` instead of guessing.
 - Paste your Buildertrend password into chat
 - Run terminal commands yourself
 - Turn on send / pay / notify
-- Merge pull requests (Brad merges)
+- Merge pull requests (the repo owner merges)
 - Drive your everyday Buildertrend Chrome tab at the same time as the agent
 
 ## If something feels wrong

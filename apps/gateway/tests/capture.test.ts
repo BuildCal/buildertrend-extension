@@ -50,7 +50,7 @@ describe("capture sanitizer", () => {
     expect(() => assertDedicatedGatewayProfile("/home/me/.config/google-chrome")).toThrow(/human/i);
     expect(() =>
       assertDedicatedGatewayProfile("/tmp/chrome-daily", "/tmp/chrome-daily"),
-    ).toThrow(/Wattle Court/i);
+    ).toThrow(/human daily/i);
     expect(() => assertDedicatedGatewayProfile("/tmp/random-profile")).toThrow(/prove/i);
     expect(() => assertDedicatedGatewayProfile("/var/lib/bt-gateway/chrome-profile")).not.toThrow();
   });

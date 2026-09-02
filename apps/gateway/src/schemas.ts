@@ -100,6 +100,7 @@ export const VERB_SCHEMAS = {
   "variations.recomputeGst": z.object({
     changeOrderId: z.coerce.number().int().positive().optional(),
     jobId: z.coerce.number().int().positive().optional(),
+    costCode: z.coerce.number().int().positive().optional(),
     lines: z.array(z.record(z.unknown())).optional(),
     ...dry,
   }),

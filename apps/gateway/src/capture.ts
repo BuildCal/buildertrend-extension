@@ -111,7 +111,7 @@ export function assertDedicatedGatewayProfile(
   const normalized = resolve(profileDir);
   if (humanProfile && resolve(humanProfile) === normalized) {
     throw new Error(
-      "Refusing the human Wattle Court Chrome profile. Session clash already ate saves. Use the dedicated gateway profile.",
+      "Refusing the human daily Chrome profile. Session clash already ate saves. Use the dedicated gateway profile.",
     );
   }
   const humanRoots = [
@@ -122,7 +122,7 @@ export function assertDedicatedGatewayProfile(
   ];
   if (humanRoots.some((re) => re.test(normalized))) {
     throw new Error(
-      "Refusing a default Chrome user-data dir. Gateway capture must use its own profile, never the human Wattle Court tab.",
+      "Refusing a default Chrome user-data dir. Gateway capture must use its own profile, never the human daily tab.",
     );
   }
   const looksGateway = /bt-gateway|gateway-profile/i.test(normalized);

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   interpretBtPayload,
   ScriptedAdapter,
+  SidecarAdapter,
+  unwrapSidecarPayload,
   type BtRequest,
 } from "../src/adapter.js";
 import { GatewayError } from "../src/errors.js";
@@ -62,6 +64,36 @@ describe("adapter error mapping", () => {
       const body = (err as GatewayError).toJSON();
       expect(body.error).toBe("not_captured");
       expect(body.discovery).toBeTruthy();
+    }
+  });
+});
+
+describe("SidecarAdapter FastAPI detail", () => {
+  it("unwraps detail so send_disabled 403 is not auth_required", async () => {
+    expect(
+      unwrapSidecarPayload({
+        detail: { error: "send_disabled", message: "notify-owners is blocked" },
+      }),
+    ).toMatchObject({ error: "send_disabled", message: "notify-owners is blocked" });
+
+    const adapter = new SidecarAdapter({
+      ...createHarness().config,
+      transport: "sidecar",
+      serviceUrl: "http://127.0.0.1:9",
+      serviceToken: "test-token",
+    });
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ detail: { error: "send_disabled", message: "blocked" } }), {
+        status: 403,
+        headers: { "content-type": "application/json" },
+      })) as typeof fetch;
+    try {
+      await expect(
+        adapter.request({ method: "GET", path: "/api/Jobsites/Grid" }),
+      ).rejects.toMatchObject({ code: "send_disabled" });
+    } finally {
+      globalThis.fetch = originalFetch;
     }
   });
 });
