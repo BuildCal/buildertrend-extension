@@ -59,6 +59,14 @@ def empty_attached_files() -> dict[str, list[Any]]:
     return {"removeDocs": [], "attachDocs": [], "updateDocs": []}
 
 
+def _as_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _as_list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
 def seed_from_defaultinfo(raw: Any) -> dict[str, Any]:
     if not isinstance(raw, dict):
         return {}
@@ -179,7 +187,7 @@ def build_create_payload(
         "performingUserEmail": seed.get("performingUserEmail") or "",
         "miscPaidToName": seed.get("miscPaidToName") or "",
         "assignedToInfo": {
-            **(seed.get("assignedToInfo") if isinstance(seed.get("assignedToInfo"), dict) else {}),
+            **_as_dict(seed.get("assignedToInfo")),
             "id": req.vendor_id,
             "userType": BILL_PERFORMING_USER_TYPE,
         },
@@ -223,14 +231,10 @@ def build_save_draft_payload(
     bill_id: int,
 ) -> dict[str, Any]:
     """PUT /api/v1/bills/{billId} Save-draft body."""
-    created_lines = created.get("lineItems") if isinstance(created.get("lineItems"), list) else []
+    created_lines = _as_list(created.get("lineItems"))
     lines: list[dict[str, Any]] = []
     for index, item in enumerate(req.line_items):
-        existing = (
-            created_lines[index]
-            if index < len(created_lines) and isinstance(created_lines[index], dict)
-            else {}
-        )
+        existing = _as_dict(created_lines[index] if index < len(created_lines) else None)
         lines.append(_save_draft_line(existing, item))
     if not lines and created_lines:
         lines = [_save_draft_line(row, None) for row in created_lines if isinstance(row, dict)]
@@ -247,9 +251,7 @@ def build_save_draft_payload(
         "performingUserId": req.vendor_id,
         "performingUserType": BILL_PERFORMING_USER_TYPE,
         "assignedToInfo": {
-            **(
-                created["assignedToInfo"] if isinstance(created.get("assignedToInfo"), dict) else {}
-            ),
+            **_as_dict(created.get("assignedToInfo")),
             "id": req.vendor_id,
             "userType": BILL_PERFORMING_USER_TYPE,
         },
