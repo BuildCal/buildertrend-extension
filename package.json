@@ -13,7 +13,10 @@
     "db:generate": "pnpm --filter web db:generate",
     "db:migrate": "pnpm --filter web db:migrate",
     "db:deploy": "pnpm --filter web db:deploy",
-    "db:seed": "pnpm --filter web db:seed"
+    "db:seed": "pnpm --filter web db:seed",
+    "gateway": "pnpm --filter gateway serve",
+    "gateway:mcp": "pnpm --filter gateway mcp",
+    "gateway:test": "pnpm --filter gateway test"
   },
   "engines": {
     "node": ">=20.0.0",

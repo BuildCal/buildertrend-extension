@@ -86,6 +86,13 @@ No anti-CSRF header is required despite the cookie existing.
 - Bill update (PUT/PATCH)
 - Bill deletion
 
+The TypeScript gateway (`apps/gateway`) is the living map for jobs, leads,
+contacts, owner invoices, variations, POs, estimates, documents, and costing.
+See `buildertrend-api-map.md` and `docs/slice-c-captures.md`.
+
+The sidecar now also exposes `POST /internal/bt-request` so the gateway can
+reuse Chrome TLS impersonation without reimplementing cookies in Node.
+
 ## User type enum (`performingUserType`)
 
 Seen in `assignedTo.options[].extraData.userType`:

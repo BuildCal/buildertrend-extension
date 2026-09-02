@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routes import bills, health, lookups, sessions, sync
+from app.routes import bills, health, internal, lookups, sessions, sync
 from app.session_store import init_from_db
 
 logging.basicConfig(level=logging.INFO)
@@ -46,6 +46,7 @@ app.include_router(sessions.router)
 app.include_router(bills.router)
 app.include_router(lookups.router)
 app.include_router(sync.router)
+app.include_router(internal.router)
 
 
 @app.get("/")

@@ -71,4 +71,8 @@ docker run -d --restart unless-stopped --env-file .env -p 8000:8000 bt-service
 | `GET` | `/lookups/cost-codes-for-job/{job_id}` | Cost codes for a job |
 | `POST` | `/sync/all` | Mirror jobs/vendors/POs/bills into Postgres |
 | `GET` | `/sync/status` | Last-synced timestamps |
+| `POST` | `/internal/bt-request` | TLS proxy for the TypeScript gateway (method/path/body/content-type) |
 | `GET` | `/healthz`, `/readyz` | Probes |
+
+The [gateway](../gateway/README.md) is the verb layer. This service stays
+the Chrome-TLS adapter and encrypted session store.

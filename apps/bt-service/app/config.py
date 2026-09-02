@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     # Rate limiting (requests per minute to BT)
     bt_rate_limit_per_minute: int = 30
 
+    # Gateway send lock — notify/pay/void/convert stay off unless a named send tool is enabled.
+    bt_gateway_enable_send: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:

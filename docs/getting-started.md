@@ -12,8 +12,8 @@ First-time setup after cloning this repository.
 ## 2. Clone and install
 
 ```bash
-git clone https://github.com/BuildCal/buildertrend-extension.git
-cd buildertrend-extension
+git clone https://github.com/BuildCal/buildertrend-gateway.git
+cd buildertrend-gateway
 
 pnpm install
 
@@ -78,7 +78,24 @@ pnpm db:seed -- admin@yourcompany.com
 
 It generates a random password and prints it. Change it after first login.
 
-## 6. Run both services
+## 6. Run the gateway (preferred for agents and your app)
+
+The TypeScript gateway is the single verb layer. After `bt-service` is up
+with a captured session:
+
+```bash
+cp apps/gateway/.env.example apps/gateway/.env
+# Match BT_SERVICE_INTERNAL_TOKEN to the sidecar. Leave BT_GATEWAY_ENABLE_SEND=false.
+
+pnpm --filter gateway serve    # HTTP :8787
+# or
+pnpm --filter gateway mcp      # stdio MCP
+```
+
+Use a dedicated gateway Chrome profile — not the human daily profile. See
+[apps/gateway/README.md](../apps/gateway/README.md).
+
+## 7. Run the bill-review web app
 
 Terminal 1 — Python sidecar:
 
@@ -96,14 +113,14 @@ pnpm dev
 
 Visit http://localhost:3000 and sign in.
 
-## 7. Capture your first Buildertrend session
+## 8. Capture your first Buildertrend session
 
 1. In Chrome, log into Buildertrend as the account you want the tool to act as.
 2. In this app, open **Admin → BT Session**.
 3. Use the [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) extension to export `buildertrend.net` cookies.
 4. Upload the file. Status should turn green after the sidecar verifies the session.
 
-## 8. Send a test bill via webhook
+## 9. Send a test bill via webhook
 
 ```bash
 curl -X POST http://localhost:3000/api/webhooks/extracted-bill \

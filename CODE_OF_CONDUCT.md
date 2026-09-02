@@ -45,7 +45,8 @@ an individual is officially representing the community in public spaces.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the maintainers at **brad@caldongroup.com**. All complaints will be
+reported to the maintainers via a private GitHub security advisory on this
+repository. All complaints will be
 reviewed and investigated promptly and fairly.
 
 ## Attribution

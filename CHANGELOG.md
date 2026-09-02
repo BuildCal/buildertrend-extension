@@ -9,6 +9,18 @@ and this project does not yet follow SemVer releases (pre-alpha).
 
 ### Added
 
+- Buildertrend Gateway (`apps/gateway`): one MCP + HTTP `/v1` surface for
+  in-scope verbs. Writes default to `dry_run`. Send/pay/notify stay locked.
+- Captured variation draft + line add/update/delete with GST dummy-line
+  recompute (1/11 of owner price; cost code from Search).
+- Capture harness (Playwright, dedicated profile) and Slice C discovery list
+  for uncaptured writes (`not_captured` instead of guessed URLs).
+- Mirror tables / `bt_sync_state` / `bt_command_log` plus `sync.pull`.
+- Sidecar `POST /internal/bt-request` with merge-patch content-type and a
+  send-path denylist.
+- HTTP `/v1` fails closed without `BT_GATEWAY_TOKEN`. Per-verb MCP/HTTP Zod
+  schemas. `bills.create` is `not_captured`. GST cost-code search (no
+  tenant fallback). Capture harness refuses the human Chrome profile.
 - MIT license, contributing guide, code of conduct, and security policy
 - GitHub issue and pull request templates
 - Complete environment variable examples (including optional Claude / Supabase)
@@ -17,7 +29,12 @@ and this project does not yet follow SemVer releases (pre-alpha).
 ### Changed
 
 - README rewritten for a public, self-hosted audience (unofficial Buildertrend disclaimer)
-- Removed tenant-specific branding and hardcoded builder IDs from examples
+- Stripped tenant/business-specific names, jobs, and ids. Builder id comes
+  from GlobalInfo. GST cost code comes from Search, not a hard-coded default.
+- PostgresStore INSERT now sets `id` on `bt_command_log` and `bt_sync_state`.
+- SidecarAdapter unwraps FastAPI `detail` so 403 `send_disabled` is not
+  mapped to `auth_required`.
+- Removed leftover tenant-specific branding and hardcoded builder IDs from examples
 - Webhook authentication now uses a timing-safe comparison and fails closed if the secret is unset
 - Invalid bill list `status` query params now return HTTP 400 instead of crashing (name clash with FastAPI `status`)
 - Anthropic and Supabase clients initialize lazily so the app can boot without optional keys

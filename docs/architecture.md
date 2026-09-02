@@ -3,6 +3,22 @@
 This document captures the why behind the structural choices. Read when
 you're tempted to refactor.
 
+## 0. One gateway (TypeScript verbs)
+
+**Decision:** All Buildertrend reads and writes go through `apps/gateway`.
+MCP tools and HTTP `/v1` are the same verbs. Your app, accounting helpers,
+and agents must not each scrape Buildertrend.
+
+**Why:** If Buildertrend changes a URL, only the adapter changes. The office
+still sees BT as the system of record; we operate outside it.
+
+**Consequence:** Uncaptured writes return `not_captured` instead of a guessed
+POST. Send/pay/notify tools exist only behind `BT_GATEWAY_ENABLE_SEND=false`.
+HTTP `/v1` fails closed without `BT_GATEWAY_TOKEN`. The gateway runtime store
+is `apps/gateway/src/store.ts`; Prisma in `apps/web` is the migration schema
+for the same tables (jobs / POs / bills plus leads / contacts / invoices /
+variations / sync_state / command_log).
+
 ## 1. Two-service split (Next.js + Python)
 
 **Decision:** The web app is Next.js on Vercel. All Buildertrend API calls
