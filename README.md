@@ -12,6 +12,30 @@ This repository also contains the older bill-review web app. New callers
 > Cookie-session access to undocumented internal APIs. Use only against **your
 > own** account. Review [Buildertrend’s terms](https://buildertrend.com) before deploying.
 
+## Use with Grok Bot
+
+If you are not technical, you do not need to clone this repo or open a terminal.
+Open **Grok Bot**, paste the prompt below, and let the agent install the gateway
+on **its** computer. There is no catalog connector named Buildertrend — the agent
+adds a **local** connector after you tap Yes.
+
+```
+Set up the Buildertrend Gateway from this GitHub repo. I'm not technical. Follow AGENTS.md and docs/GROK_BOT_SETUP.md. Walk me through it. Don't enable send.
+
+https://github.com/BuildCal/buildertrend-gateway
+```
+
+The old address [https://github.com/BuildCal/buildertrend-extension](https://github.com/BuildCal/buildertrend-extension) still redirects here.
+
+When Grok Bot asks to add the Buildertrend Gateway connector, tap **Yes**. When
+it shows a Buildertrend sign-in screen, sign in there with a login you are
+allowed to use — do not paste your password into the chat. Writes stay drafts.
+Send and pay stay off.
+
+Full walkthrough for humans: [docs/GROK_BOT_SETUP.md](docs/GROK_BOT_SETUP.md).
+Playbook for the agent (read this first if you were only handed the GitHub URL):
+[AGENTS.md](AGENTS.md).
+
 ## What it is
 
 | Layer | Role |
@@ -59,6 +83,8 @@ Invoice extraction, PO matching, and a human review queue still live in
 
 | Doc | What’s in it |
 | --- | --- |
+| [Use with Grok Bot](docs/GROK_BOT_SETUP.md) | Human setup — paste the URL, tap Yes, sign in |
+| [AGENTS.md](AGENTS.md) | Agent playbook when someone pastes this repo URL |
 | [Gateway README](apps/gateway/README.md) | Profile, MCP, HTTP, dry_run, send lock |
 | [Slice C captures](docs/slice-c-captures.md) | Remaining writes + exact UI clicks |
 | [API map](buildertrend-api-map.md) | Captured routes (no cookies) |

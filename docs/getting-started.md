@@ -12,8 +12,8 @@ First-time setup after cloning this repository.
 ## 2. Clone and install
 
 ```bash
-git clone https://github.com/BuildCal/buildertrend-extension.git
-cd buildertrend-extension
+git clone https://github.com/BuildCal/buildertrend-gateway.git
+cd buildertrend-gateway
 
 pnpm install
 
