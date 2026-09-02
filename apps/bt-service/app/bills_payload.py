@@ -243,7 +243,11 @@ def build_save_draft_payload(
         "performingUserId": req.vendor_id,
         "performingUserType": BILL_PERFORMING_USER_TYPE,
         "assignedToInfo": {
-            **(created.get("assignedToInfo") if isinstance(created.get("assignedToInfo"), dict) else {}),
+            **(
+                created["assignedToInfo"]
+                if isinstance(created.get("assignedToInfo"), dict)
+                else {}
+            ),
             "id": req.vendor_id,
             "userType": BILL_PERFORMING_USER_TYPE,
         },

@@ -19,24 +19,24 @@ from app.models.api import BillLineItem, CreateBillRequest
 
 
 def _req(**overrides: object) -> CreateBillRequest:
-    base = dict(
-        job_id=9,
-        vendor_id=3,
-        bill_number="TEST-1",
-        bill_title="Gateway capture",
-        invoice_date=datetime(2026, 9, 2),
-        due_date=datetime(2026, 9, 16),
-        description="",
-        line_items=[
+    base = {
+        "job_id": 9,
+        "vendor_id": 3,
+        "bill_number": "TEST-1",
+        "bill_title": "Gateway capture",
+        "invoice_date": datetime(2026, 9, 2),
+        "due_date": datetime(2026, 9, 16),
+        "description": "",
+        "line_items": [
             BillLineItem(
                 cost_code_id=88,
                 title="Gateway capture line",
                 unit_cost=1.0,
             )
         ],
-        purchase_order_id=None,
-        source_extraction_id="src-1",
-    )
+        "purchase_order_id": None,
+        "source_extraction_id": "src-1",
+    }
     base.update(overrides)
     return CreateBillRequest.model_validate(base)
 
