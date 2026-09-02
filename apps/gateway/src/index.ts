@@ -18,4 +18,3 @@ export {
   GST_ADD_FORBIDDEN_FIELDS,
 } from "./gst.js";
 export { sanitizeCapture, writeCapture, renderMapAppend } from "./capture.js";
-export { remainingCaptures } from "./catalog.js";

@@ -37,7 +37,7 @@ _BLOCKED_FRAGMENTS = (
 )
 
 
-class BTSendDisabled(Exception):
+class BTSendDisabledError(Exception):
     """Raised when a send/pay/notify path is blocked."""
 
 
@@ -146,7 +146,7 @@ class BTClient:
         if not settings.bt_gateway_enable_send:
             lower = path.lower()
             if any(frag in lower for frag in _BLOCKED_FRAGMENTS):
-                raise BTSendDisabled(f"Send/pay/notify path blocked: {path}")
+                raise BTSendDisabledError(f"Send/pay/notify path blocked: {path}")
 
         # Never log Cookie, Authorization, or login HTML.
         logger.info("BT %s %s", method, path.split("?")[0])
@@ -182,7 +182,10 @@ class BTClient:
 
         if "application/json" not in ct:
             snippet = resp.text[:200].lower()
-            if "<html" in snippet and ("login" in snippet or "sign in" in snippet or "auth0" in snippet):
+            looks_like_login = "<html" in snippet and (
+                "login" in snippet or "sign in" in snippet or "auth0" in snippet
+            )
+            if looks_like_login:
                 raise BTAuthError("BT returned login HTML. Session is likely expired.")
             raise BTAuthError(
                 f"Expected JSON, got {ct!r} on {method} {path}. Session may be expired."
@@ -205,6 +208,26 @@ class BTClient:
                 raise BTAPIError(f"BT success=false: {body.get('message')!r}")
 
         return body
+
+    def request(
+        self,
+        method: Literal["GET", "POST", "PUT", "DELETE", "PATCH"],
+        path: str,
+        *,
+        json_body: Any = None,
+        params: dict | None = None,
+        content_type: str | None = None,
+        raw: bool = False,
+    ) -> dict:
+        """Public transport used by the TypeScript gateway sidecar."""
+        return self._request(
+            method,
+            path,
+            json_body=json_body,
+            params=params,
+            content_type=content_type,
+            raw=raw,
+        )
 
     # ------------------------------------------------------------------
     # Read endpoints

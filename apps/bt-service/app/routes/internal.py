@@ -11,7 +11,7 @@ from fastapi import status as http_status
 from pydantic import BaseModel, Field
 
 from app.auth import require_internal_token
-from app.clients import BTAPIError, BTAuthError, BTClient, BTSendDisabled
+from app.clients import BTAPIError, BTAuthError, BTClient, BTSendDisabledError
 from app.session_store import get_active_session
 
 router = APIRouter(
@@ -40,8 +40,8 @@ def _client() -> BTClient:
     return BTClient(cookies=session.cookies)
 
 
-def _reraise(exc: BTAuthError | BTAPIError | BTSendDisabled) -> NoReturn:
-    if isinstance(exc, BTSendDisabled):
+def _reraise(exc: BTAuthError | BTAPIError | BTSendDisabledError) -> NoReturn:
+    if isinstance(exc, BTSendDisabledError):
         raise HTTPException(
             status_code=http_status.HTTP_403_FORBIDDEN,
             detail={"error": "send_disabled", "message": str(exc)},
@@ -61,7 +61,7 @@ def _reraise(exc: BTAuthError | BTAPIError | BTSendDisabled) -> NoReturn:
 async def bt_request(req: BtProxyRequest) -> dict:
     try:
         client = _client()
-        body = client._request(  # noqa: SLF001 — transport is intentionally low-level
+        body = client.request(
             req.method,
             req.path,
             json_body=req.json_body,
@@ -77,5 +77,5 @@ async def bt_request(req: BtProxyRequest) -> dict:
             "contentType": req.content_type or "application/json",
             "json": body,
         }
-    except (BTAuthError, BTAPIError, BTSendDisabled) as exc:
+    except (BTAuthError, BTAPIError, BTSendDisabledError) as exc:
         _reraise(exc)

@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.clients.bt_client import BTAuthError, BTClient, BTSendDisabled
+from app.clients.bt_client import BTAuthError, BTClient, BTSendDisabledError
 
 
 @pytest.fixture
@@ -84,7 +84,7 @@ def test_send_paths_are_blocked(mock_settings):
     with patch("app.clients.bt_client.cffi_requests.Session") as session_cls:
         session_cls.return_value = _session(MagicMock())
         client = BTClient(cookies={})
-        with pytest.raises(BTSendDisabled):
+        with pytest.raises(BTSendDisabledError):
             client._request("POST", "/apix/v2/ChangeOrders/1/notify-owners", json_body={})
 
 

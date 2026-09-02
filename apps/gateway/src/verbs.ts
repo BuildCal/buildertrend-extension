@@ -297,7 +297,7 @@ registerVerb("invoices.changes", async (ctx) => {
       path: "/apix/v2/EntityChangeTracking/entity-changes",
       query: {
         entityId,
-        entityType: ctx.args.entityType ?? 3,
+        entityType: numberish(ctx.args.entityType) ?? 3,
       },
     }),
   );
