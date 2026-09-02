@@ -16,11 +16,16 @@ This repository also contains the older bill-review web app. New callers
 
 If you are not technical, you do not need to clone this repo or open a terminal.
 Open **Grok Bot**, paste the prompt below, and let the agent install the gateway
-on **its** computer. There is no catalog connector named Buildertrend — the agent
-adds a **local** connector after you tap Yes.
+on **its** computer — or update it if it is already there. There is no catalog
+connector named Buildertrend — the agent adds a **local** connector after you
+tap Yes.
 
 ```
 Set up the Buildertrend Gateway from this GitHub repo. I'm not technical. Follow AGENTS.md and docs/GROK_BOT_SETUP.md. Walk me through it. Don't enable send.
+
+If the gateway is already installed, update it from GitHub now. Do not leave the old checkout. Use the existing copy on Grok Bot's computer. Fetch origin/main. Do not clone a second copy. Keep my .env files and my Buildertrend session. Do not overwrite secrets, cookies, or the dedicated Chrome profile. Run pnpm install or update Python deps only if the lockfile or sidecar deps changed. Restart the local connector after the pull so new verbs load.
+
+Do not set a cron, a routine, or a scheduled git pull. No Friday auto-update. Do not pull unattended. Do not merge pull requests. Do not rebase. Do not enable send.
 
 https://github.com/BuildCal/buildertrend-gateway
 ```

@@ -49,12 +49,18 @@ redirects to the same place.
 ```
 Set up the Buildertrend Gateway from this GitHub repo. I'm not technical. Follow AGENTS.md and docs/GROK_BOT_SETUP.md. Walk me through it. Don't enable send.
 
+If the gateway is already installed, update it from GitHub now. Do not leave the old checkout. Use the existing copy on Grok Bot's computer. Fetch origin/main. Do not clone a second copy. Keep my .env files and my Buildertrend session. Do not overwrite secrets, cookies, or the dedicated Chrome profile. Run pnpm install or update Python deps only if the lockfile or sidecar deps changed. Restart the local connector after the pull so new verbs load.
+
+Do not set a cron, a routine, or a scheduled git pull. No Friday auto-update. Do not pull unattended. Do not merge pull requests. Do not rebase. Do not enable send.
+
 https://github.com/BuildCal/buildertrend-gateway
 ```
 
 Send it. The agent should say, in one short message, that it will install
 the gateway on **its** computer, connect it as a connector, then ask you to
-sign into Buildertrend once.
+sign into Buildertrend once. If it is already installed, the agent should
+update that copy and tell you that you are current — or that there was
+nothing to pull.
 
 ### 3. Agree to add the connector
 
@@ -102,6 +108,8 @@ wired yet; the agent will say `not_captured` instead of guessing.
 - Turn on send / pay / notify
 - Merge pull requests (the repo owner merges)
 - Drive your everyday Buildertrend Chrome tab at the same time as the agent
+- Set a weekly git-pull cron or any auto-update. To update, paste the same
+  prompt again.
 
 ## If something feels wrong
 
