@@ -226,14 +226,18 @@ def build_save_draft_payload(
     created_lines = created.get("lineItems") if isinstance(created.get("lineItems"), list) else []
     lines: list[dict[str, Any]] = []
     for index, item in enumerate(req.line_items):
-        existing = created_lines[index] if index < len(created_lines) and isinstance(
-            created_lines[index], dict
-        ) else {}
+        existing = (
+            created_lines[index]
+            if index < len(created_lines) and isinstance(created_lines[index], dict)
+            else {}
+        )
         lines.append(_save_draft_line(existing, item))
     if not lines and created_lines:
         lines = [_save_draft_line(row, None) for row in created_lines if isinstance(row, dict)]
-    invoice = req.invoice_date.strftime("%Y-%m-%dT%H:%M:%S") if req.invoice_date else created.get(
-        "invoiceDate"
+    invoice = (
+        req.invoice_date.strftime("%Y-%m-%dT%H:%M:%S")
+        if req.invoice_date
+        else created.get("invoiceDate")
     )
     body = {
         **created,
@@ -244,9 +248,7 @@ def build_save_draft_payload(
         "performingUserType": BILL_PERFORMING_USER_TYPE,
         "assignedToInfo": {
             **(
-                created["assignedToInfo"]
-                if isinstance(created.get("assignedToInfo"), dict)
-                else {}
+                created["assignedToInfo"] if isinstance(created.get("assignedToInfo"), dict) else {}
             ),
             "id": req.vendor_id,
             "userType": BILL_PERFORMING_USER_TYPE,

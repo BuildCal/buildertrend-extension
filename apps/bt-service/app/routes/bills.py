@@ -174,5 +174,3 @@ async def get_bill(bill_id: int) -> dict:
         return client.get_bill(bill_id)
     except (BTAuthError, BTAPIError) as e:
         _reraise_bt(e)
-
-
