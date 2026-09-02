@@ -72,9 +72,17 @@ No anti-CSRF header is required despite the cookie existing.
 - `GET /apix/v2/Bills/get-available-purchase-orders/{vendorId}/{vendorType}/{jobId}`
   - Open POs for vendor on job. `vendorType=2` for subs/vendors.
 - `GET /api/v1/Bills/GetBillMapping?purchaseOrderId={poId}&jobId={jobId}&billId=0`
-  - Pre-fills line items from a PO.
-- `POST /api/v1/bills?jobId={jobId}` — create bill. Payload shape in
-  `apps/bt-service/app/routes/bills.py:_build_bt_bill_payload`.
+  - Pre-fills line items from a PO. **Not captured** on 2 Sep 2026.
+    `purchaseOrderId: -1` / `isCreateNewFromPO: false` until it is.
+- `POST /api/v1/bills?jobId={jobId}` — create bill as Draft (`status` 9).
+  Amounts stay 0 on this POST. Payload builder:
+  `apps/gateway/src/bills-payload.ts` / `apps/bt-service/app/bills_payload.py`.
+- `PUT /api/v1/bills/{billId}` — Save draft (`saveAsDraft: true`). Exclusive
+  `unitCost` / `builderCost`. PDF is **not** on this PUT.
+- `POST /api/documents/61/tempFile?jobId={jobId}&uploadFullResPhoto=true` —
+  multipart staging for a bill PDF (`#fileList`). Not `ocr-upload`.
+- `POST /api/Documents/EntityDocs` — attach one temp doc to the bill
+  (`documentType` 58, `id: [billId]`, notify flags false).
 - `GET /api/v1/bills/{billId}` — fetch saved bill.
 
 ### Lookups
@@ -82,9 +90,9 @@ No anti-CSRF header is required despite the cookie existing.
 - `POST /api/jobpicker/GetJobPickerData` — paginated/filtered jobs.
 
 ### Not yet captured (TODO)
-- File attachment (multipart upload)
-- Bill update (PUT/PATCH)
+- Real PO link (`GET /api/v1/Bills/GetBillMapping`) — list helper is captured
 - Bill deletion
+- Job-folder `docs.upload` (bill PDF attach is captured as `bills.attach`)
 
 The TypeScript gateway (`apps/gateway`) is the living map for jobs, leads,
 contacts, owner invoices, variations, POs, estimates, documents, and costing.
@@ -103,6 +111,6 @@ Seen in `assignedTo.options[].extraData.userType`:
 
 ## Cost types in line items
 
-The `costTypes: [7]` value is what showed up consistently in captured
-payloads. We use `7` as the default and don't yet know the full enum.
-If it ever rejects, capture a fresh HAR and inspect.
+Captured 2 Sep 2026 on bills: `costTypes: []` on create, `costTypes: [-1]`
+on Save draft. Do not send the old guessed `[7]`. Dummy `4000 GST` /
+`costTypes` patterns from owner change-orders do **not** apply to bills.

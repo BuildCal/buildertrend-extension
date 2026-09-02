@@ -19,9 +19,25 @@ import {
 } from "./gst.js";
 import { hashEntity, type MirrorEntity, type MirrorRecord } from "./store.js";
 import {
+  assertBillFieldLengths,
+  assertBillSendPayLocked,
+  assertNoRealPurchaseOrder,
+  attachArgsOf,
+  BILL_NONE_PO_ID,
+  BILL_PO_LINK_DISCOVERY,
+  BILL_TEMPFILE_FIELD,
+  BILL_TEMPFILE_MEDIA_TYPE,
+  billCreatePayload,
+  billEntityDocsPayload,
+  billIdFrom,
+  billSaveDraftPayload,
+  seedFromDefaultInfo,
+} from "./bills-payload.js";
+import {
   bt,
   btJson,
   guardConflict,
+  optionalNumber,
   registerVerb,
   requireNumber,
   type VerbContext,
@@ -478,6 +494,129 @@ registerVerb("bills.file", async (ctx) => {
   };
 });
 
+registerVerb("bills.defaults", async (ctx) => {
+  const jobId = requireNumber(ctx.args, "jobId");
+  return unwrapData(
+    await btJson(ctx, {
+      method: "GET",
+      path: "/api/v1/bills/defaultinfo",
+      query: { jobId, isBillRemainingAction: false },
+    }),
+  );
+});
+
+registerVerb("bills.availablePurchaseOrders", async (ctx) => {
+  const vendorId = requireNumber(ctx.args, "vendorId");
+  const jobId = requireNumber(ctx.args, "jobId");
+  return unwrapData(
+    await btJson(ctx, {
+      method: "GET",
+      path: `/apix/v2/Bills/get-available-purchase-orders/${vendorId}/2/${jobId}`,
+    }),
+  );
+});
+
+registerVerb("bills.create", async (ctx) => {
+  const jobId = requireNumber(ctx.args, "jobId");
+  requireNumber(ctx.args, "vendorId");
+  assertBillSendPayLocked(ctx.args);
+  assertNoRealPurchaseOrder(ctx.args);
+  assertBillFieldLengths(ctx.args);
+  const defaults = await btJson(ctx, {
+    method: "GET",
+    path: "/api/v1/bills/defaultinfo",
+    query: { jobId, isBillRemainingAction: false },
+  });
+  const createBody = billCreatePayload(ctx.args, jobId, defaults);
+  const createdRaw = await btJson(ctx, {
+    method: "POST",
+    path: "/api/v1/bills",
+    query: { jobId },
+    json: createBody,
+  });
+  const created = seedFromDefaultInfo(createdRaw);
+  const billId = billIdFrom(created);
+  if (billId == null) {
+    throw new GatewayError("bt_error", "Bill create did not return an id", {
+      keys: Object.keys(created),
+    });
+  }
+  const saveBody = billSaveDraftPayload(ctx.args, created, billId);
+  const savedRaw = await btJson(ctx, {
+    method: "PUT",
+    path: `/api/v1/bills/${billId}`,
+    json: saveBody,
+  });
+  const saved = seedFromDefaultInfo(savedRaw);
+  await upsertRows(ctx, "bill", [asRecord(saved)]);
+  const attach = attachArgsOf(ctx.args);
+  let attached: unknown;
+  if (attach) {
+    attached = await attachBillPdf(ctx, jobId, billId, attach);
+  }
+  return {
+    billId,
+    status: 9,
+    statusText: "Draft",
+    raw: saved,
+    created: created,
+    attached,
+    purchaseOrderId: BILL_NONE_PO_ID,
+    isCreateNewFromPO: false,
+  };
+});
+
+registerVerb("bills.update", async (ctx) => {
+  const billId = requireNumber(ctx.args, "billId");
+  assertBillSendPayLocked(ctx.args);
+  assertNoRealPurchaseOrder(ctx.args);
+  assertBillFieldLengths(ctx.args);
+  const currentRaw = await btJson(ctx, { method: "GET", path: `/api/v1/bills/${billId}` });
+  const current = seedFromDefaultInfo(currentRaw);
+  await guardConflict(ctx, "bill", String(billId), current);
+  const saveBody = billSaveDraftPayload(ctx.args, current, billId);
+  const savedRaw = await btJson(ctx, {
+    method: "PUT",
+    path: `/api/v1/bills/${billId}`,
+    json: saveBody,
+  });
+  const saved = seedFromDefaultInfo(savedRaw);
+  await upsertRows(ctx, "bill", [asRecord(saved)]);
+  await ctx.store.setSyncState({
+    entityType: "bill",
+    externalId: String(billId),
+    lastPulledHash: hashEntity(saved),
+    lastPulledAt: new Date().toISOString(),
+  });
+  const jobId = optionalNumber(ctx.args, "jobId") ?? numberish(current.jobId);
+  const attach = attachArgsOf(ctx.args);
+  let attached: unknown;
+  if (attach && jobId) {
+    attached = await attachBillPdf(ctx, jobId, billId, attach);
+  } else if (attach && !jobId) {
+    throw new GatewayError("validation", "jobId is required to attach a PDF on bills.update");
+  }
+  return { billId, status: 9, raw: saved, attached };
+});
+
+registerVerb("bills.attach", async (ctx) => {
+  const billId = requireNumber(ctx.args, "billId");
+  const jobId = requireNumber(ctx.args, "jobId");
+  const attach = attachArgsOf(ctx.args);
+  if (!attach) {
+    throw new GatewayError("validation", "filename and contentBase64 are required");
+  }
+  return attachBillPdf(ctx, jobId, billId, attach);
+});
+
+registerVerb("bills.linkPurchaseOrder", async () => {
+  throw new GatewayError(
+    "not_captured",
+    "Linking a real purchase order is not captured (GetBillMapping never fired).",
+    { discovery: BILL_PO_LINK_DISCOVERY },
+  );
+});
+
 registerVerb("pos.list", async (ctx) => {
   await maybeSelectJob(ctx, optionalJob(ctx));
   const payload = await btJson(ctx, {
@@ -736,6 +875,66 @@ async function applyGst(ctx: VerbContext, changeOrderId: number): Promise<unknow
     });
   }
   return computed;
+}
+
+async function requireBuilderId(ctx: VerbContext): Promise<number> {
+  if (ctx.config.builderId > 0) return ctx.config.builderId;
+  const globalInfo = dataOf(
+    await btJson(ctx, { method: "GET", path: "/api/AccountInfo/GlobalInfo" }),
+  );
+  const builderId = numberish(globalInfo.builderId ?? globalInfo.BuilderId);
+  if (builderId == null) {
+    throw new GatewayError(
+      "validation",
+      "builderId is unknown. Call session.status after login — do not hard-code a tenant id.",
+    );
+  }
+  ctx.config.builderId = builderId;
+  return builderId;
+}
+
+async function attachBillPdf(
+  ctx: VerbContext,
+  jobId: number,
+  billId: number,
+  file: { filename: string; contentBase64: string; contentType: string },
+): Promise<unknown> {
+  const tempRaw = await btJson(ctx, {
+    method: "POST",
+    path: `/api/documents/${BILL_TEMPFILE_MEDIA_TYPE}/tempFile`,
+    query: { jobId, uploadFullResPhoto: true },
+    multipart: [
+      {
+        fieldName: BILL_TEMPFILE_FIELD,
+        filename: file.filename,
+        contentType: file.contentType,
+        contentBase64: file.contentBase64,
+      },
+    ],
+  });
+  const tempDoc = asRecord(seedFromDefaultInfo(tempRaw));
+  if (!tempDoc.id && !tempDoc.documentInstanceId && !tempDoc.tempId) {
+    throw new GatewayError("bt_error", "tempFile did not return a document object", {
+      billId,
+    });
+  }
+  const builderId = await requireBuilderId(ctx);
+  const entityDocs = billEntityDocsPayload({
+    builderId,
+    jobId,
+    billId,
+    tempDoc,
+  });
+  const attached = await btJson(ctx, {
+    method: "POST",
+    path: "/api/Documents/EntityDocs",
+    json: entityDocs,
+  });
+  return {
+    tempDoc,
+    entityDocs: unwrapData(attached),
+    documentType: 58,
+  };
 }
 
 function optionalJob(ctx: VerbContext): number | undefined {

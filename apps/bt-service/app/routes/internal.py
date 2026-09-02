@@ -4,6 +4,7 @@ The gateway owns verbs, dry_run, GST, and send locks. This route only
 impersonates Chrome and forwards an already-authorized /api or /apix call.
 """
 
+import base64
 from typing import Any, Literal, NoReturn
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -21,6 +22,13 @@ router = APIRouter(
 )
 
 
+class MultipartFile(BaseModel):
+    field_name: str = "fileList"
+    filename: str
+    content_type: str = "application/pdf"
+    content_base64: str
+
+
 class BtProxyRequest(BaseModel):
     method: Literal["GET", "POST", "PUT", "PATCH", "DELETE"]
     path: str
@@ -28,6 +36,7 @@ class BtProxyRequest(BaseModel):
     json_body: Any = None
     content_type: str | None = Field(default="application/json")
     raw: bool = False
+    multipart_files: list[MultipartFile] | None = None
 
 
 def _client() -> BTClient:
@@ -61,13 +70,23 @@ def _reraise(exc: BTAuthError | BTAPIError | BTSendDisabledError) -> NoReturn:
 async def bt_request(req: BtProxyRequest) -> dict:
     try:
         client = _client()
+        files = None
+        if req.multipart_files:
+            files = [
+                (
+                    part.field_name or "fileList",
+                    (part.filename, base64.b64decode(part.content_base64), part.content_type),
+                )
+                for part in req.multipart_files
+            ]
         body = client.request(
             req.method,
             req.path,
-            json_body=req.json_body,
+            json_body=None if files else req.json_body,
             params=req.params,
-            content_type=req.content_type,
+            content_type=None if files else req.content_type,
             raw=req.raw,
+            files=files,
         )
         if req.raw:
             return {"ok": True, **body}

@@ -139,6 +139,7 @@ class BTClient:
         params: dict | None = None,
         content_type: str | None = None,
         raw: bool = False,
+        files: list[tuple[str, tuple[str, bytes, str]]] | None = None,
     ) -> dict:
         if not path.startswith("/api") or ".." in path:
             raise BTAPIError(f"Refusing non-BT path: {path}")
@@ -153,13 +154,24 @@ class BTClient:
 
         url = f"{self._base_url}{path}"
         headers: dict[str, str] = {}
-        if content_type:
+        if content_type and files is None:
             headers["content-type"] = content_type
         kwargs: dict = {"allow_redirects": False, "params": params}
-        if headers:
-            kwargs["headers"] = headers
-        if json_body is not None:
-            kwargs["data"] = json.dumps(json_body)
+        if files is not None:
+            # Drop the session JSON content-type so curl-cffi sets a multipart boundary.
+            merged = {
+                key: value
+                for key, value in self._session.headers.items()
+                if str(key).lower() != "content-type"
+            }
+            merged.update(headers)
+            kwargs["headers"] = merged
+            kwargs["files"] = files
+        else:
+            if headers:
+                kwargs["headers"] = headers
+            if json_body is not None:
+                kwargs["data"] = json.dumps(json_body)
 
         resp = self._session.request(method, url, **kwargs)
 
@@ -218,6 +230,7 @@ class BTClient:
         params: dict | None = None,
         content_type: str | None = None,
         raw: bool = False,
+        files: list[tuple[str, tuple[str, bytes, str]]] | None = None,
     ) -> dict:
         """Public transport used by the TypeScript gateway sidecar."""
         return self._request(
@@ -227,6 +240,7 @@ class BTClient:
             params=params,
             content_type=content_type,
             raw=raw,
+            files=files,
         )
 
     # ------------------------------------------------------------------
@@ -354,7 +368,7 @@ class BTClient:
     # ------------------------------------------------------------------
 
     def create_bill(self, job_id: int, payload: dict) -> dict:
-        """Create a new bill on the given job. Returns the new bill data."""
+        """POST /api/v1/bills?jobId= — captured create (status 9, amounts 0)."""
         return self._request(
             "POST",
             "/api/v1/bills",
@@ -362,4 +376,28 @@ class BTClient:
             params={"jobId": job_id},
         )
 
-    # Not yet captured: update_bill(), delete_bill(), attach_pdf_to_bill().
+    def update_bill(self, bill_id: int, payload: dict) -> dict:
+        """PUT /api/v1/bills/{billId} — captured Save draft (saveAsDraft true)."""
+        return self._request("PUT", f"/api/v1/bills/{bill_id}", json_body=payload)
+
+    def upload_bill_temp_file(
+        self,
+        job_id: int,
+        *,
+        filename: str,
+        content: bytes,
+        content_type: str = "application/pdf",
+    ) -> dict:
+        """POST /api/documents/61/tempFile — captured bill PDF staging. Not ocr-upload."""
+        return self._request(
+            "POST",
+            "/api/documents/61/tempFile",
+            params={"jobId": job_id, "uploadFullResPhoto": "true"},
+            files=[("fileList", (filename, content, content_type))],
+        )
+
+    def attach_entity_docs(self, payload: dict) -> dict:
+        """POST /api/Documents/EntityDocs — captured bill PDF attach (documentType 58)."""
+        return self._request("POST", "/api/Documents/EntityDocs", json_body=payload)
+
+    # Not yet captured: delete_bill(), GetBillMapping / real PO link.

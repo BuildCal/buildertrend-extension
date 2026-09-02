@@ -6,6 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi import status as http_status
 
 from app.auth import require_internal_token
+from app.bills_payload import (
+    BillPayloadError,
+    build_create_payload,
+    build_save_draft_payload,
+    seed_from_defaultinfo,
+)
 from app.clients import BTAPIError, BTAuthError, BTClient
 from app.models.api import (
     CreateBillRequest,
@@ -86,16 +92,30 @@ async def create_bill(req: CreateBillRequest) -> CreateBillResponse:
     try:
         client = _client_for_active_session()
 
-        # Build the BT-specific payload from our clean request model
-        payload = _build_bt_bill_payload(req)
+        defaults = client.get_bill_defaults(req.job_id)
+        payload = build_create_payload(req, defaults)
         result = client.create_bill(req.job_id, payload)
 
-        bill_data = result["data"]
+        bill_data = seed_from_defaultinfo(result)
+        bill_id = bill_data.get("id") or bill_data.get("billId")
+        if not bill_id:
+            raise HTTPException(
+                status_code=http_status.HTTP_502_BAD_GATEWAY,
+                detail="Bill create did not return an id",
+            )
+        save_payload = build_save_draft_payload(bill_data, req, int(bill_id))
+        saved = client.update_bill(int(bill_id), save_payload)
+        saved_data = seed_from_defaultinfo(saved)
         return CreateBillResponse(
-            bill_id=bill_data["id"],
-            external_id=bill_data["externalId"],
+            bill_id=int(bill_id),
+            external_id=str(saved_data.get("externalId") or bill_data.get("externalId") or bill_id),
             status="created",
         )
+    except BillPayloadError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
     except (BTAuthError, BTAPIError) as e:
         _reraise_bt(e)
 
@@ -156,89 +176,3 @@ async def get_bill(bill_id: int) -> dict:
         _reraise_bt(e)
 
 
-# ----------------------------------------------------------------------
-# Payload construction — the messy BT-specific shape lives here, hidden
-# from the rest of the codebase.
-# ----------------------------------------------------------------------
-
-
-def _build_bt_bill_payload(req: CreateBillRequest) -> dict:
-    """Translate our clean CreateBillRequest into the BT API's payload.
-
-    BT expects ~50 fields, most of which are UI configuration noise.
-    We send the minimum that produces a valid bill.
-
-    The web app is expected to pass a `vendor_id` that is valid for the
-    job (from `/lookups/vendors-for-job/{job_id}`). This sidecar does
-    not re-fetch the vendor list on every create.
-    """
-    return {
-        "billNumber": req.bill_number,
-        "billTitle": req.bill_title,
-        "invoiceDate": req.invoice_date.strftime("%Y-%m-%dT%H:%M:%S"),
-        "performingUserId": req.vendor_id,
-        "performingUserType": 2,  # subs/vendors
-        "performingUserName": "",  # BT looks this up from the ID
-        "performingUserEmail": "",
-        "miscPaidToName": "",
-        "unifiedDeadlineRequest": {
-            "isDeadlineLinked": False,
-            "deadlineOffset": 0,
-            "deadlineIsAfterLinkedItem": True,
-            "scheduleItemSelectedValue": -1,
-            "dueDate": req.due_date.strftime("%Y-%m-%dT%H:%M:%S"),
-            "paymentTerms": None,
-        },
-        "attachedFiles": {"removeDocs": [], "attachDocs": [], "updateDocs": []},
-        "lineItems": [
-            {
-                "id": 0,
-                "costCodeId": li.cost_code_id,
-                "costCode": li.cost_code_id,
-                "unitCost": li.unit_cost,
-                "quantity": li.quantity,
-                "unitType": li.unit_type,
-                "builderCost": li.unit_cost,
-                "title": li.title,
-                "description": li.description,
-                "internalNotes": "",
-                "catalogItemId": None,
-                "pageType": "",
-                "pageTypeEnum": 17,
-                "shouldUseAutoUpdates": False,
-                "varianceCode": 0,
-                "parentId": None,
-                "costTypes": li.cost_types,
-                "markedAs": -1,
-            }
-            for li in req.line_items
-        ],
-        "description": req.description,
-        "purchaseOrderId": req.purchase_order_id,
-        "jobId": req.job_id,
-        "billId": 0,
-        "status": 0,
-        "documentType": 0,
-        "containerIsValid": True,
-        "billToOwner": False,
-        "sendToAccounting": False,
-        "readyForPayment": False,
-        "isCreateNewFromPO": req.purchase_order_id is not None,
-        "syncUpdatesToAccounting": False,
-        "sendForApproval": False,
-        "approveBill": False,
-        "saveDraftToJob": False,
-        "payInFull": False,
-        "payOnline": False,
-        "isSendToAccountingDirty": False,
-        "billLineItems": [],
-        "customFields": [],
-        "selectedApprovers": [],
-        "resetApprovalGlobalUserIds": [],
-        "approvalIdsToDelete": [],
-        "approvers": [],
-        "approvalCommentNotificationUsers": [],
-        "approvalCommentMentionableUsers": [],
-        "selectedJobId": req.job_id,
-        "varianceCount": 0,
-    }
