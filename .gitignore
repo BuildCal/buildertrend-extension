@@ -59,6 +59,9 @@ session.json
 *.har
 *.pem
 *.p12
+bt-api-capture/
+**/chrome-profile/
+**/gateway-profile/
 
 # Tooling
 .turbo/

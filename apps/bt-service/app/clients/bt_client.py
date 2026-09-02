@@ -10,6 +10,7 @@ in route handlers that compose multiple client methods.
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 from typing import Any, Literal
@@ -19,6 +20,25 @@ from curl_cffi import requests as cffi_requests
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+_BLOCKED_FRAGMENTS = (
+    "notify-owners",
+    "notifyowners",
+    "sendinvoice",
+    "send-invoice",
+    "markreadyforpayment",
+    "mark-ready-for-payment",
+    "paybill",
+    "pay-bill",
+    "voidinvoice",
+    "void-invoice",
+    "converttojob",
+    "convert-to-job",
+)
+
+
+class BTSendDisabled(Exception):
+    """Raised when a send/pay/notify path is blocked."""
 
 
 def _bill_list_filters(*, status_csv: str, search_text: str) -> dict[str, Any]:
@@ -117,9 +137,27 @@ class BTClient:
         *,
         json_body: Any = None,
         params: dict | None = None,
+        content_type: str | None = None,
+        raw: bool = False,
     ) -> dict:
+        if not path.startswith("/api") or ".." in path:
+            raise BTAPIError(f"Refusing non-BT path: {path}")
+        settings = get_settings()
+        if not settings.bt_gateway_enable_send:
+            lower = path.lower()
+            if any(frag in lower for frag in _BLOCKED_FRAGMENTS):
+                raise BTSendDisabled(f"Send/pay/notify path blocked: {path}")
+
+        # Never log Cookie, Authorization, or login HTML.
+        logger.info("BT %s %s", method, path.split("?")[0])
+
         url = f"{self._base_url}{path}"
+        headers: dict[str, str] = {}
+        if content_type:
+            headers["content-type"] = content_type
         kwargs: dict = {"allow_redirects": False, "params": params}
+        if headers:
+            kwargs["headers"] = headers
         if json_body is not None:
             kwargs["data"] = json.dumps(json_body)
 
@@ -135,7 +173,17 @@ class BTClient:
             raise BTAPIError(f"Unexpected redirect on {method} {path}: {location}")
 
         ct = resp.headers.get("content-type", "")
+        if raw:
+            return {
+                "status": resp.status_code,
+                "contentType": ct,
+                "bodyBase64": base64.b64encode(resp.content).decode(),
+            }
+
         if "application/json" not in ct:
+            snippet = resp.text[:200].lower()
+            if "<html" in snippet and ("login" in snippet or "sign in" in snippet or "auth0" in snippet):
+                raise BTAuthError("BT returned login HTML. Session is likely expired.")
             raise BTAuthError(
                 f"Expected JSON, got {ct!r} on {method} {path}. Session may be expired."
             )
@@ -144,7 +192,7 @@ class BTClient:
             try:
                 err_body = resp.json()
             except Exception:
-                err_body = resp.text[:500]
+                err_body = "[non-json body redacted]"
             raise BTAPIError(f"HTTP {resp.status_code} on {method} {path}: {err_body}")
 
         body = resp.json()

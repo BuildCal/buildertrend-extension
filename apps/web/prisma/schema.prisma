@@ -165,6 +165,7 @@ model BtJob {
   jobNumber String?
   status    String?
   address   String?
+  rawHash   String?
   syncedAt  DateTime @default(now())
 
   purchaseOrders BtPurchaseOrder[]
@@ -216,6 +217,7 @@ model BtPurchaseOrder {
   totalAmount       Decimal?  @db.Decimal(12, 2)
   invoicedAmount    Decimal?  @db.Decimal(12, 2)
   issueDate         DateTime?
+  rawHash           String?
   syncedAt          DateTime  @default(now())
 
   job       BtJob?                @relation(fields: [btJobId], references: [btJobId])
@@ -269,6 +271,7 @@ model BtBill {
   paymentStatus Int?
 
   purchaseOrderNumber String?
+  rawHash             String?
 
   syncedAt DateTime @default(now())
 
@@ -283,6 +286,99 @@ model BtBill {
   @@index([paymentStatus])
   @@index([invoicedDate])
   @@map("bt_bills")
+}
+
+// ----- Gateway mirrors (BT is the record; these are copies) -----
+
+model BtLead {
+  btLeadId  Int      @id
+  builderId Int
+  btJobId   Int?
+  title     String?
+  status    String?
+  amount    Decimal? @db.Decimal(12, 2)
+  rawHash   String?
+  extra     Json?
+  syncedAt  DateTime @default(now())
+
+  @@index([builderId])
+  @@map("bt_leads")
+}
+
+model BtContact {
+  btContactId Int      @id
+  builderId   Int
+  btJobId     Int?
+  title       String?
+  status      String?
+  amount      Decimal? @db.Decimal(12, 2)
+  rawHash     String?
+  extra       Json?
+  syncedAt    DateTime @default(now())
+
+  @@index([builderId])
+  @@map("bt_contacts")
+}
+
+model BtInvoice {
+  btInvoiceId Int      @id
+  builderId   Int
+  btJobId     Int?
+  title       String?
+  status      String?
+  amount      Decimal? @db.Decimal(12, 2)
+  rawHash     String?
+  extra       Json?
+  syncedAt    DateTime @default(now())
+
+  @@index([builderId])
+  @@index([btJobId])
+  @@map("bt_invoices")
+}
+
+model BtVariation {
+  btVariationId Int      @id
+  builderId     Int
+  btJobId       Int?
+  title         String?
+  status        String?
+  amount        Decimal? @db.Decimal(12, 2)
+  rawHash       String?
+  extra         Json?
+  syncedAt      DateTime @default(now())
+
+  @@index([builderId])
+  @@index([btJobId])
+  @@map("bt_variations")
+}
+
+model BtSyncState {
+  id             String    @id @default(cuid())
+  entityType     String
+  externalId     String
+  lastPulledHash String?
+  lastPulledAt   DateTime?
+  lastPushedAt   DateTime?
+  lastError      String?
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([entityType, externalId])
+  @@index([entityType])
+  @@map("bt_sync_state")
+}
+
+model BtCommandLog {
+  id             String   @id @default(cuid())
+  verb           String
+  dryRun         Boolean  @default(true)
+  payloadSummary Json
+  btStatus       Int?
+  errorCode      String?
+  createdAt      DateTime @default(now())
+
+  @@index([verb])
+  @@index([createdAt])
+  @@map("bt_command_log")
 }
 
 // ----- Our enrichment of BT vendors -----

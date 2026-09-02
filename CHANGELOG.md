@@ -9,6 +9,15 @@ and this project does not yet follow SemVer releases (pre-alpha).
 
 ### Added
 
+- Buildertrend Gateway (`apps/gateway`): one MCP + HTTP `/v1` surface for
+  in-scope verbs. Writes default to `dry_run`. Send/pay/notify stay locked.
+- Captured variation draft + line add/update/delete with Wattle Court GST
+  dummy-line recompute (1/11 of owner price, cost code 17072421).
+- Capture harness (Playwright, dedicated profile) and Slice C discovery list
+  for uncaptured writes (`not_captured` instead of guessed URLs).
+- Mirror tables / `bt_sync_state` / `bt_command_log` plus `sync.pull`.
+- Sidecar `POST /internal/bt-request` with merge-patch content-type and a
+  send-path denylist.
 - MIT license, contributing guide, code of conduct, and security policy
 - GitHub issue and pull request templates
 - Complete environment variable examples (including optional Claude / Supabase)

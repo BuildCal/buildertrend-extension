@@ -3,6 +3,18 @@
 This document captures the why behind the structural choices. Read when
 you're tempted to refactor.
 
+## 0. One gateway (TypeScript verbs)
+
+**Decision:** All Buildertrend reads and writes go through `apps/gateway`.
+MCP tools and HTTP `/v1` are the same verbs. ViaBuild, Xero helpers, Clarum,
+and agents must not each scrape Buildertrend.
+
+**Why:** If Buildertrend changes a URL, only the adapter changes. The office
+still sees BT as the system of record; we operate outside it.
+
+**Consequence:** Uncaptured writes return `not_captured` instead of a guessed
+POST. Send/pay/notify tools exist only behind `BT_GATEWAY_ENABLE_SEND=false`.
+
 ## 1. Two-service split (Next.js + Python)
 
 **Decision:** The web app is Next.js on Vercel. All Buildertrend API calls
