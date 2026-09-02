@@ -1,35 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
 import { sendVerbs, VERBS } from "./catalog.js";
 import type { GatewayConfig } from "./config.js";
 import { GatewayError, isGatewayError } from "./errors.js";
 import { invokeByName } from "./invoke.js";
+import { mcpShape, parseVerbArgs } from "./schemas.js";
 import type { BtAdapter } from "./adapter.js";
 import type { GatewayStore } from "./store.js";
 import "./verbs.js";
-
-const CommonArgs = {
-  jobId: z.number().optional(),
-  invoiceId: z.number().optional(),
-  changeOrderId: z.number().optional(),
-  leadId: z.number().optional(),
-  contactId: z.number().optional(),
-  billId: z.number().optional(),
-  purchaseOrderId: z.number().optional(),
-  fileId: z.number().optional(),
-  folderId: z.number().optional(),
-  dry_run: z.boolean().optional(),
-  search: z.string().optional(),
-  page: z.number().optional(),
-  pageSize: z.number().optional(),
-  lines: z.array(z.unknown()).optional(),
-  line: z.record(z.unknown()).optional(),
-  lineIds: z.array(z.number()).optional(),
-  header: z.record(z.unknown()).optional(),
-  body: z.record(z.unknown()).optional(),
-  skipGstRecompute: z.boolean().optional(),
-};
 
 export function createMcpServer(
   config: GatewayConfig,
@@ -47,9 +25,9 @@ export function createMcpServer(
     server.tool(
       spec.tool,
       spec.description,
-      CommonArgs,
+      mcpShape(spec.verb),
       async (input) => {
-        const args = (input ?? {}) as Record<string, unknown>;
+        const args = parseVerbArgs(spec.verb, (input ?? {}) as Record<string, unknown>);
         try {
           const result = await invokeByName(spec.verb, { config, adapter, store, args });
           return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };

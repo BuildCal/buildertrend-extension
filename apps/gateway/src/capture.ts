@@ -1,5 +1,6 @@
+import { existsSync } from "node:fs";
 import { appendFile, mkdir, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { redactHeaders, redactObject, redactUrl } from "./redact.js";
 
 export interface CapturedCall {
@@ -100,6 +101,39 @@ export function captureFromPlaywrightRequest(req: PlaywrightLikeRequest): Captur
   });
 }
 
+export function assertDedicatedGatewayProfile(
+  profileDir: string,
+  humanProfile?: string,
+): void {
+  if (!profileDir.trim()) {
+    throw new Error("Capture harness needs --profile / BT_GATEWAY_PROFILE (dedicated gateway profile).");
+  }
+  const normalized = resolve(profileDir);
+  if (humanProfile && resolve(humanProfile) === normalized) {
+    throw new Error(
+      "Refusing the human Wattle Court Chrome profile. Session clash already ate saves. Use the dedicated gateway profile.",
+    );
+  }
+  const humanRoots = [
+    /\/Google\/Chrome$/i,
+    /\/google-chrome$/i,
+    /\/chromium$/i,
+    /\/Default$/i,
+  ];
+  if (humanRoots.some((re) => re.test(normalized))) {
+    throw new Error(
+      "Refusing a default Chrome user-data dir. Gateway capture must use its own profile, never the human Wattle Court tab.",
+    );
+  }
+  const looksGateway = /bt-gateway|gateway-profile/i.test(normalized);
+  const hasMarker = existsSync(resolve(normalized, ".bt-gateway-profile"));
+  if (!looksGateway && !hasMarker) {
+    throw new Error(
+      "Cannot prove this is not the human profile. Path must contain bt-gateway or gateway-profile, or the directory must contain a .bt-gateway-profile marker.",
+    );
+  }
+}
+
 export async function runCaptureHarness(opts: {
   url: string;
   profileDir: string;
@@ -126,6 +160,7 @@ export async function runCaptureHarness(opts: {
       "Playwright is not installed. From apps/gateway: npm i -D playwright && npx playwright install chromium",
     );
   }
+  assertDedicatedGatewayProfile(opts.profileDir, process.env.BT_GATEWAY_HUMAN_PROFILE);
   const calls: CapturedCall[] = [];
   const context = await playwright.chromium.launchPersistentContext(opts.profileDir, {
     headless: false,

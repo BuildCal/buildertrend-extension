@@ -2,6 +2,8 @@ import { GatewayError } from "./errors.js";
 import { stableHash } from "./hash.js";
 import { summarizePayload } from "./redact.js";
 
+/** Runtime store for the gateway. Prisma in apps/web is the migration schema only. */
+
 export type MirrorEntity =
   | "job"
   | "lead"
@@ -230,8 +232,28 @@ export class PostgresStore implements GatewayStore {
           ],
         );
         return;
-      case "lead":
       case "contact":
+        await this.pool.query(
+          `INSERT INTO bt_contacts
+             ("btContactId", "builderId", name, email, phone, company, "rawHash", extra, "syncedAt")
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, NOW())
+           ON CONFLICT ("btContactId") DO UPDATE SET
+             "builderId" = EXCLUDED."builderId", name = EXCLUDED.name,
+             email = EXCLUDED.email, phone = EXCLUDED.phone, company = EXCLUDED.company,
+             "rawHash" = EXCLUDED."rawHash", extra = EXCLUDED.extra, "syncedAt" = NOW()`,
+          [
+            id,
+            record.builderId,
+            record.title ?? extra.name ?? "",
+            extra.email ?? null,
+            extra.phone ?? null,
+            extra.company ?? null,
+            record.hash,
+            JSON.stringify(extra),
+          ],
+        );
+        return;
+      case "lead":
       case "invoice":
       case "variation":
         await this.pool.query(
@@ -318,6 +340,12 @@ export class PostgresStore implements GatewayStore {
           status: row.status == null ? undefined : String(row.status),
           hash: String(row.rawHash ?? ""),
         }));
+      }
+      case "contact": {
+        const result = await this.pool.query(
+          `SELECT "btContactId" AS id, "builderId", name AS title, "rawHash" FROM bt_contacts`,
+        );
+        return result.rows.map((row) => asMirror(entityType, row));
       }
       case "po": {
         const result = await this.pool.query(

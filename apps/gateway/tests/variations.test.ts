@@ -84,6 +84,27 @@ describe("variation draft + GST recompute", () => {
     expect((update?.json as { quantity: number }).quantity).toBe(1000);
   });
 
+  it("does not write when the last pulled hash does not match current GET", async () => {
+    const { store, invoke, calls } = createHarness(async (req) => {
+      if (req.method === "GET") return variationGet([{ id: 1, title: "changed-in-bt" }]);
+      return { status: 200, contentType: CONTENT_JSON, json: { success: true, data: {} } };
+    });
+    await store.setSyncState({
+      entityType: "variation",
+      externalId: "55",
+      lastPulledHash: "old-hash",
+    });
+    await expect(
+      invoke("variations.addLines", {
+        changeOrderId: 55,
+        dry_run: false,
+        skipGstRecompute: true,
+        lines: [{ title: "should not send", quantity: 1, unitCost: 1, costCode: 1, taxGroupId: null, pageTypeEnum: 6 }],
+      }),
+    ).rejects.toMatchObject({ code: "conflict" });
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
   it("refuses conflict when BT changed after last pull", async () => {
     const { store, invoke } = createHarness(async (req) => {
       if (req.method === "GET") return variationGet([{ id: 1, title: "changed-in-bt" }]);

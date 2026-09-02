@@ -18,6 +18,9 @@ and this project does not yet follow SemVer releases (pre-alpha).
 - Mirror tables / `bt_sync_state` / `bt_command_log` plus `sync.pull`.
 - Sidecar `POST /internal/bt-request` with merge-patch content-type and a
   send-path denylist.
+- HTTP `/v1` fails closed without `BT_GATEWAY_TOKEN`. Per-verb MCP/HTTP Zod
+  schemas. `bills.create` is `not_captured`. GST cost-code search with
+  fallback. Capture harness refuses the human Chrome profile.
 - MIT license, contributing guide, code of conduct, and security policy
 - GitHub issue and pull request templates
 - Complete environment variable examples (including optional Claude / Supabase)

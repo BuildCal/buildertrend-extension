@@ -13,6 +13,7 @@ export interface GatewayConfig {
   serviceToken: string | undefined;
   cookieJarPath: string | undefined;
   chromeProfilePath: string | undefined;
+  humanProfilePath: string | undefined;
   databaseUrl: string | undefined;
   userAgent: string;
 }
@@ -45,6 +46,7 @@ export function loadConfig(overrides: Partial<GatewayConfig> = {}): GatewayConfi
     serviceToken: process.env.BT_SERVICE_INTERNAL_TOKEN ?? process.env.INTERNAL_API_TOKEN,
     cookieJarPath: process.env.BT_COOKIE_JAR,
     chromeProfilePath: process.env.BT_GATEWAY_PROFILE,
+    humanProfilePath: process.env.BT_GATEWAY_HUMAN_PROFILE,
     databaseUrl: process.env.DATABASE_URL,
     userAgent:
       process.env.BT_USER_AGENT ??

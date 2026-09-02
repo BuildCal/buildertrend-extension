@@ -26,6 +26,9 @@ async function main(): Promise<void> {
   }
 
   if (command === "serve") {
+    if (!config.gatewayToken?.trim()) {
+      throw new Error("BT_GATEWAY_TOKEN is required. HTTP /v1 fails closed.");
+    }
     const app = createHttpApp(config, adapter, store);
     serve({ fetch: app.fetch, port: config.port }, (info) => {
       console.error(`Buildertrend Gateway HTTP on :${info.port} (send=${config.enableSend})`);

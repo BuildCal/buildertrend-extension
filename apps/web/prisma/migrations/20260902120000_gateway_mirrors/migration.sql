@@ -21,10 +21,10 @@ CREATE TABLE "bt_leads" (
 CREATE TABLE "bt_contacts" (
     "btContactId" INTEGER NOT NULL,
     "builderId" INTEGER NOT NULL,
-    "btJobId" INTEGER,
-    "title" TEXT,
-    "status" TEXT,
-    "amount" DECIMAL(12,2),
+    "name" TEXT NOT NULL,
+    "email" TEXT,
+    "phone" TEXT,
+    "company" TEXT,
     "rawHash" TEXT,
     "extra" JSONB,
     "syncedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -82,6 +82,7 @@ CREATE TABLE "bt_command_log" (
 
 CREATE INDEX "bt_leads_builderId_idx" ON "bt_leads"("builderId");
 CREATE INDEX "bt_contacts_builderId_idx" ON "bt_contacts"("builderId");
+CREATE INDEX "bt_contacts_name_idx" ON "bt_contacts"("name");
 CREATE INDEX "bt_invoices_builderId_idx" ON "bt_invoices"("builderId");
 CREATE INDEX "bt_invoices_btJobId_idx" ON "bt_invoices"("btJobId");
 CREATE INDEX "bt_variations_builderId_idx" ON "bt_variations"("builderId");

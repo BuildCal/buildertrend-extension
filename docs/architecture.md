@@ -14,6 +14,10 @@ still sees BT as the system of record; we operate outside it.
 
 **Consequence:** Uncaptured writes return `not_captured` instead of a guessed
 POST. Send/pay/notify tools exist only behind `BT_GATEWAY_ENABLE_SEND=false`.
+HTTP `/v1` fails closed without `BT_GATEWAY_TOKEN`. The gateway runtime store
+is `apps/gateway/src/store.ts`; Prisma in `apps/web` is the migration schema
+for the same tables (jobs / POs / bills plus leads / contacts / invoices /
+variations / sync_state / command_log).
 
 ## 1. Two-service split (Next.js + Python)
 

@@ -1,0 +1,48 @@
+/** Draft bill payload used only after a real capture. Never pay. */
+
+export function billCreatePayload(args: Record<string, unknown>, jobId: number): Record<string, unknown> {
+  const lines = Array.isArray(args.lineItems) ? args.lineItems : [];
+  return {
+    billNumber: args.billNumber,
+    billTitle: args.billTitle,
+    invoiceDate: args.invoiceDate,
+    performingUserId: args.vendorId,
+    performingUserType: 2,
+    performingUserName: "",
+    performingUserEmail: "",
+    miscPaidToName: "",
+    unifiedDeadlineRequest: {
+      isDeadlineLinked: false,
+      deadlineOffset: 0,
+      deadlineIsAfterLinkedItem: true,
+      scheduleItemSelectedValue: -1,
+      dueDate: args.dueDate,
+      paymentTerms: null,
+    },
+    attachedFiles: { removeDocs: [], attachDocs: [], updateDocs: [] },
+    lineItems: lines,
+    description: args.description ?? "",
+    purchaseOrderId: args.purchaseOrderId ?? null,
+    jobId,
+    billId: 0,
+    status: 0,
+    documentType: 0,
+    containerIsValid: true,
+    billToOwner: false,
+    sendToAccounting: false,
+    readyForPayment: false,
+    isCreateNewFromPO: args.purchaseOrderId != null,
+    syncUpdatesToAccounting: false,
+    sendForApproval: false,
+    approveBill: false,
+    saveDraftToJob: true,
+    payInFull: false,
+    payOnline: false,
+    isSendToAccountingDirty: false,
+    billLineItems: [],
+    customFields: [],
+    selectedApprovers: [],
+    selectedJobId: jobId,
+    varianceCount: 0,
+  };
+}

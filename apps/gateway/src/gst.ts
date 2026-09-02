@@ -39,7 +39,7 @@ export const GST_ADD_FORBIDDEN_FIELDS = [
 
 export function isGstDummyLine(line: VariationLineLike): boolean {
   const title = `${line.title ?? ""} ${line.itemTitle ?? ""}`;
-  if (title.includes("[GST001]")) return true;
+  if (title.includes("[GST001]") || /4000\s*GST/i.test(title)) return true;
   if (line.costCode === GST_COST_CODE) return true;
   return false;
 }
@@ -76,9 +76,12 @@ export function inclusiveFromExclusive(exclusiveOwnerPrice: number): number {
   return roundMoney(exclusiveOwnerPrice + gstFromExclusiveOwnerPrice(exclusiveOwnerPrice));
 }
 
-export function buildGstDummyLine(exclusiveOwnerPrice: number): GstDummyLine {
+export function buildGstDummyLine(
+  exclusiveOwnerPrice: number,
+  costCode: number = GST_COST_CODE,
+): GstDummyLine {
   return {
-    costCode: GST_COST_CODE,
+    costCode,
     title: GST_LINE_TITLE,
     unitCost: GST_UNIT_COST,
     quantity: roundMoney(exclusiveOwnerPrice),
@@ -87,7 +90,31 @@ export function buildGstDummyLine(exclusiveOwnerPrice: number): GstDummyLine {
   };
 }
 
-export function recomputeGstDummyLine(lines: VariationLineLike[]): {
+export function pickGstCostCodeFromSearch(payload: unknown): number | undefined {
+  const root = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+  const data = (root.data ?? root) as Record<string, unknown>;
+  const lists = [data.results, data.items, data.costCodes, data.data, payload];
+  for (const list of lists) {
+    if (!Array.isArray(list)) continue;
+    for (const row of list) {
+      if (!row || typeof row !== "object") continue;
+      const rec = row as Record<string, unknown>;
+      const title = String(rec.title ?? rec.name ?? rec.displayName ?? rec.code ?? "");
+      const code = String(rec.code ?? rec.displayCode ?? rec.title ?? "");
+      const isGst = /4000\s*GST/i.test(`${title} ${code}`) || /^4000$/.test(code.trim());
+      if (!isGst) continue;
+      const id = rec.costCode ?? rec.id ?? rec.costCodeId;
+      if (typeof id === "number" && Number.isFinite(id)) return id;
+      if (typeof id === "string" && Number.isFinite(Number(id))) return Number(id);
+    }
+  }
+  return undefined;
+}
+
+export function recomputeGstDummyLine(
+  lines: VariationLineLike[],
+  costCode: number = GST_COST_CODE,
+): {
   exclusiveOwnerPrice: number;
   gstAmount: number;
   inclusiveOwnerTotal: number;
@@ -97,7 +124,7 @@ export function recomputeGstDummyLine(lines: VariationLineLike[]): {
   const exclusiveOwnerPrice = roundMoney(ownerPriceOfRealLines(lines));
   const existing = lines.find(isGstDummyLine);
   const existingId = typeof existing?.id === "number" ? existing.id : undefined;
-  const dummy = buildGstDummyLine(exclusiveOwnerPrice);
+  const dummy = buildGstDummyLine(exclusiveOwnerPrice, costCode);
   return {
     exclusiveOwnerPrice,
     gstAmount: gstFromExclusiveOwnerPrice(exclusiveOwnerPrice),

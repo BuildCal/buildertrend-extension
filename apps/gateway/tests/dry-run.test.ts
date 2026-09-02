@@ -15,7 +15,7 @@ describe("dry_run", () => {
 
   it("does not hit the network when dry_run is explicit true", async () => {
     const { calls, invoke } = createHarness();
-    await invoke("bills.create", { jobId: 1, vendorId: 2, dry_run: true });
+    await invoke("variations.saveDraftHeader", { changeOrderId: 1, dry_run: true, header: {} });
     expect(calls).toHaveLength(0);
   });
 

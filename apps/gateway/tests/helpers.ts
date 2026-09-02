@@ -19,7 +19,10 @@ export function testConfig(overrides: Partial<GatewayConfig> = {}): GatewayConfi
   });
 }
 
-export function createHarness(handler?: (req: BtRequest) => BtResponse | Promise<BtResponse>) {
+export function createHarness(
+  handler?: (req: BtRequest) => BtResponse | Promise<BtResponse>,
+  configOverrides: Partial<GatewayConfig> = {},
+) {
   const calls: BtRequest[] = [];
   const adapter = new ScriptedAdapter(async (req) => {
     calls.push(req);
@@ -29,7 +32,7 @@ export function createHarness(handler?: (req: BtRequest) => BtResponse | Promise
     return handler(req);
   });
   const store = new MemoryStore();
-  const config = testConfig();
+  const config = testConfig(configOverrides);
   return {
     calls,
     adapter,

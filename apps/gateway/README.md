@@ -38,7 +38,9 @@ On `needsToRelogin: true` or 401 the gateway **stops writes** and returns `auth_
 
 ## Attach a signed-in profile
 
-Use a **dedicated gateway Chrome profile**. Do not dual-drive a human's daily tab (session clash already corrupted saves).
+**Dedicated gateway Chrome profile / cookie jar only.** Never the human Wattle Court tab. Session clash already ate saves when both drove the same Chrome profile.
+
+The capture harness **fails closed** unless the profile path contains `bt-gateway` or `gateway-profile`, or the directory has a `.bt-gateway-profile` marker. It also refuses `BT_GATEWAY_HUMAN_PROFILE` if that path is passed as `--profile`.
 
 1. Sign into `https://buildertrend.net` in that profile.
 2. Export cookies to a JSON jar **or** let the existing `bt-service` session upload store them encrypted.
@@ -67,6 +69,8 @@ pnpm --filter gateway test
 pnpm --filter gateway mcp      # stdio MCP for Cursor / Grok
 pnpm --filter gateway serve    # HTTP :8787
 ```
+
+HTTP **requires** `BT_GATEWAY_TOKEN`. Unset or empty token → 401 on every `/v1` route (health stays open). Stdio MCP is local-only.
 
 HTTP (ViaBuild and other apps — same verbs):
 

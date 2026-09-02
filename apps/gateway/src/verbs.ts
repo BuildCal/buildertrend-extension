@@ -17,7 +17,7 @@ import {
 import {
   assertNoForbiddenGstAddFields,
   isDuplicateInvoiceMessage,
-  isGstDummyLine,
+  pickGstCostCodeFromSearch,
   recomputeGstDummyLine,
   type VariationLineLike,
 } from "./gst.js";
@@ -106,6 +106,9 @@ function mirrorFromRow(
       poNumber: row.poNumber ?? row.purchaseOrderNumber,
       billNumber: asRecord(row.billNumberLink).title ?? row.billNumber,
       paymentStatus: asRecord(row.purchaseOrderPaymentStatus).paymentStatus ?? row.paymentStatus,
+      email: row.email ?? row.emailAddress,
+      phone: row.phone ?? row.phoneNumber,
+      company: row.company ?? row.companyName,
     },
     hash: hashEntity(row),
   };
@@ -348,6 +351,7 @@ async function saveDraftHeader(ctx: VerbContext): Promise<unknown> {
     path: `/api/ChangeOrders/${id}/Update`,
     json: header,
   });
+  await refreshVariationSync(ctx, id);
   return unwrapData(payload);
 }
 
@@ -368,6 +372,7 @@ registerVerb("variations.updateLine", async (ctx) => {
     contentType: CONTENT_MERGE_PATCH,
     json: { changeOrderId, ...line },
   });
+  await refreshVariationSync(ctx, changeOrderId);
   const gst = ctx.args.skipGstRecompute === true ? undefined : await applyGst(ctx, changeOrderId);
   return { raw: unwrapData(payload), gst };
 });
@@ -397,6 +402,7 @@ registerVerb("variations.addLines", async (ctx) => {
     contentType: CONTENT_JSON,
     json: { changeOrderId, lineItems: lines, pageTypeEnum: 6 },
   });
+  await refreshVariationSync(ctx, changeOrderId);
   const gst = ctx.args.skipGstRecompute === true ? undefined : await applyGst(ctx, changeOrderId);
   return { raw: unwrapData(payload), gst };
 });
@@ -412,6 +418,7 @@ registerVerb("variations.deleteLines", async (ctx) => {
     path: "/apix/v2/LineItems/delete-change-order-line-items",
     json: { changeOrderId, lineItemIds: lineIds },
   });
+  await refreshVariationSync(ctx, changeOrderId);
   const gst = ctx.args.skipGstRecompute === true ? undefined : await applyGst(ctx, changeOrderId);
   return { raw: unwrapData(payload), gst };
 });
@@ -471,18 +478,6 @@ registerVerb("bills.file", async (ctx) => {
   };
 });
 
-registerVerb("bills.create", async (ctx) => {
-  const jobId = requireNumber(ctx.args, "jobId");
-  const payload = billCreatePayload(ctx.args, jobId);
-  const result = await btJson(ctx, {
-    method: "POST",
-    path: "/api/v1/bills",
-    query: { jobId },
-    json: payload,
-  });
-  return unwrapData(result);
-});
-
 registerVerb("pos.list", async (ctx) => {
   await maybeSelectJob(ctx, optionalJob(ctx));
   const payload = await btJson(ctx, {
@@ -504,18 +499,24 @@ registerVerb("pos.get", async (ctx) => {
 });
 
 registerVerb("pos.linkedBills", async (ctx) => {
-  const data = asRecord(await getPo(ctx));
-  return data.relatedBills ?? data.linkedBills ?? data.bills ?? [];
+  const id = requireNumber(ctx.args, "purchaseOrderId");
+  return unwrapData(
+    await btJson(ctx, { method: "GET", path: `/api/PurchaseOrders/${id}/LinkedBills` }),
+  );
 });
 
 registerVerb("pos.linkedBids", async (ctx) => {
-  const data = asRecord(await getPo(ctx));
-  return data.relatedBids ?? data.linkedBids ?? data.bids ?? [];
+  const id = requireNumber(ctx.args, "purchaseOrderId");
+  return unwrapData(
+    await btJson(ctx, { method: "GET", path: `/api/PurchaseOrders/${id}/linked-bids` }),
+  );
 });
 
 registerVerb("pos.approvals", async (ctx) => {
-  const data = asRecord(await getPo(ctx));
-  return data.approvals ?? data.approvers ?? [];
+  const id = requireNumber(ctx.args, "purchaseOrderId");
+  return unwrapData(
+    await btJson(ctx, { method: "GET", path: `/api/PurchaseOrders/${id}/EntityApprovals` }),
+  );
 });
 
 registerVerb("estimates.worksheet", async (ctx) => {
@@ -668,9 +669,42 @@ async function loadVariation(ctx: VerbContext, id: number): Promise<unknown> {
   );
 }
 
+async function resolveGstCostCode(ctx: VerbContext, jobId?: number): Promise<number> {
+  try {
+    const payload = await btJson(ctx, {
+      method: "POST",
+      path: "/api/Search",
+      query: { limit: 10 },
+      json: { search: "4000 GST", jobIds: jobId ? [jobId] : [], categories: [30] },
+    });
+    const found = pickGstCostCodeFromSearch(payload);
+    if (found) return found;
+  } catch {
+    // Search is best-effort; this builder still has the observed fallback id.
+  }
+  console.error("[gst] 4000 GST search missed; falling back to costCode 17072421 for this builder");
+  return GST_COST_CODE;
+}
+
+async function refreshVariationSync(ctx: VerbContext, changeOrderId: number, current?: unknown): Promise<unknown> {
+  const payload = current ?? (await loadVariation(ctx, changeOrderId));
+  await ctx.store.setSyncState({
+    entityType: "variation",
+    externalId: String(changeOrderId),
+    lastPulledHash: hashEntity(payload),
+    lastPulledAt: new Date().toISOString(),
+  });
+  return payload;
+}
+
 async function applyGst(ctx: VerbContext, changeOrderId: number): Promise<unknown> {
   const current = await loadVariation(ctx, changeOrderId);
-  const computed = recomputeGstDummyLine(linesFromVariation(current));
+  const jobId =
+    numberish(asRecord(current).jobId) ??
+    numberish(asRecord(asRecord(current).changeOrder).jobId) ??
+    optionalJob(ctx);
+  const costCode = await resolveGstCostCode(ctx, jobId);
+  const computed = recomputeGstDummyLine(linesFromVariation(current), costCode);
   if (computed.existingGstLineId != null) {
     await btJson(ctx, {
       method: "PUT",
@@ -682,7 +716,7 @@ async function applyGst(ctx: VerbContext, changeOrderId: number): Promise<unknow
         quantity: computed.dummy.quantity,
         unitCost: computed.dummy.unitCost,
         title: computed.dummy.title,
-        costCode: GST_COST_CODE,
+        costCode,
         taxGroupId: null,
         pageTypeEnum: computed.dummy.pageTypeEnum,
       },
@@ -700,11 +734,6 @@ async function applyGst(ctx: VerbContext, changeOrderId: number): Promise<unknow
     });
   }
   return computed;
-}
-
-async function getPo(ctx: VerbContext): Promise<unknown> {
-  const id = requireNumber(ctx.args, "purchaseOrderId");
-  return unwrapData(await btJson(ctx, { method: "GET", path: `/api/PurchaseOrders/${id}` }));
 }
 
 function optionalJob(ctx: VerbContext): number | undefined {
@@ -743,53 +772,6 @@ function billGridBody(ctx: VerbContext): Record<string, unknown> {
       "1": search,
     }),
     jobIds: jobIdsFrom(ctx.args),
-  };
-}
-
-function billCreatePayload(args: Record<string, unknown>, jobId: number): Record<string, unknown> {
-  const lines = Array.isArray(args.lineItems) ? args.lineItems : [];
-  return {
-    billNumber: args.billNumber,
-    billTitle: args.billTitle,
-    invoiceDate: args.invoiceDate,
-    performingUserId: args.vendorId,
-    performingUserType: 2,
-    performingUserName: "",
-    performingUserEmail: "",
-    miscPaidToName: "",
-    unifiedDeadlineRequest: {
-      isDeadlineLinked: false,
-      deadlineOffset: 0,
-      deadlineIsAfterLinkedItem: true,
-      scheduleItemSelectedValue: -1,
-      dueDate: args.dueDate,
-      paymentTerms: null,
-    },
-    attachedFiles: { removeDocs: [], attachDocs: [], updateDocs: [] },
-    lineItems: lines,
-    description: args.description ?? "",
-    purchaseOrderId: args.purchaseOrderId ?? null,
-    jobId,
-    billId: 0,
-    status: 0,
-    documentType: 0,
-    containerIsValid: true,
-    billToOwner: false,
-    sendToAccounting: false,
-    readyForPayment: false,
-    isCreateNewFromPO: args.purchaseOrderId != null,
-    syncUpdatesToAccounting: false,
-    sendForApproval: false,
-    approveBill: false,
-    saveDraftToJob: true,
-    payInFull: false,
-    payOnline: false,
-    isSendToAccountingDirty: false,
-    billLineItems: [],
-    customFields: [],
-    selectedApprovers: [],
-    selectedJobId: jobId,
-    varianceCount: 0,
   };
 }
 

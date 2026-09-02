@@ -470,9 +470,17 @@ export const VERBS: VerbSpec[] = [
     httpPath: "/v1/bills/create",
     httpMethod: "POST",
     kind: "write",
-    captured: true,
+    captured: false,
+    sandboxRequired: true,
     description:
-      "Create a project bill as draft. Captured in this repo (POST /api/v1/bills). Never pay. Never mark ready for payment.",
+      "Create a project bill as draft. Not captured on the used-module overnight pass. Never pay.",
+    discovery: {
+      ui: "Bills — add on a sandbox job",
+      click:
+        "Create a sandbox project-expense draft, Save. Do not mark ready for payment. Never workers comp / icare / tax / payroll.",
+      sandboxHint: "Project expense only. Bades scope.",
+      expectedPaths: ["/api/v1/bills"],
+    },
   },
   {
     verb: "bills.update",

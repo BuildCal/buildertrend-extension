@@ -308,15 +308,16 @@ model BtLead {
 model BtContact {
   btContactId Int      @id
   builderId   Int
-  btJobId     Int?
-  title       String?
-  status      String?
-  amount      Decimal? @db.Decimal(12, 2)
+  name        String
+  email       String?
+  phone       String?
+  company     String?
   rawHash     String?
   extra       Json?
   syncedAt    DateTime @default(now())
 
   @@index([builderId])
+  @@index([name])
   @@map("bt_contacts")
 }
 

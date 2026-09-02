@@ -1,20 +1,40 @@
-# Buildertrend API map
+# Buildertrend API map — used-module overnight pass
 
-Unofficial internal routes used by the Wattle Court gateway.
-Org: Caldon Homes Pty Ltd t/as Wattle Court Mid-Coast. Observed `builderId` **110310**.
+Unofficial internal routes for the Wattle Court gateway.
+Org: **Caldon Homes Pty Ltd t/as Wattle Court Mid-Coast**. Observed `builderId` **110310**.
 Host: `https://buildertrend.net`.
 
-Do not commit HAR files or cookies. `useSession=` on a query string is a boolean flag, not a secret.
+Do not commit HAR files, cookies, `Authorization`, or `Cookie` values.
+`useSession=` on a query string is a **boolean flag**, not a secret.
+
+Writes that were **actually fired** this pass:
+
+| Method | Path | Content-Type |
+| --- | --- | --- |
+| PUT | `/api/ChangeOrders/{id}/Update` | `application/json` |
+| PUT | `/apix/v2/LineItems/update-change-order-line-item` | `application/merge-patch+json` |
+| POST | `/apix/v2/LineItems/add-change-order-line-items` | `application/json` |
+| DELETE | `/apix/v2/LineItems/delete-change-order-line-items` | `application/json` |
+| POST | `/api/jobpicker/GetJobPickerData` | `application/json` |
+| POST | `/api/jobpicker/SetJobPickerData` | `application/json` |
+
+All other writes below are **not_captured**. Do not invent them.
+
+---
 
 ## Session / chrome
 
 | Verb | Method | Path | Notes |
 | --- | --- | --- | --- |
-| `session.status` | GET | `/apix/v2/context/init` | |
-| `session.status` | GET | `/api/AccountInfo/GlobalInfo` | `needsToRelogin` |
-| `jobs.picker.list` | POST | `/api/jobpicker/GetJobPickerData` | |
-| `jobs.picker.select` | POST | `/api/jobpicker/SetJobPickerData` | Required before most job-scoped grids |
+| `session.status` | GET | `/apix/v2/context/init` | Builder context |
+| `session.status` | GET | `/api/AccountInfo/GlobalInfo` | `needsToRelogin` → stop writes |
+| `jobs.picker.list` | POST | `/api/jobpicker/GetJobPickerData` | **Fired** |
+| `jobs.picker.select` | POST | `/api/jobpicker/SetJobPickerData` | **Fired.** Required before most job-scoped grids |
 | `jobs.picker.existing` | GET | `/api/jobpicker/GetExistingJobList` | |
+
+Dedicated **gateway** Chrome profile / cookie jar only. Never dual-drive the human Wattle Court tab.
+
+---
 
 ## Jobs
 
@@ -22,21 +42,26 @@ Do not commit HAR files or cookies. `useSession=` on a query string is a boolean
 | --- | --- | --- | --- |
 | `jobs.list` | POST | `/api/Jobsites/Grid` | Captured. Filters `GET /api/Filters/33` |
 | `jobs.get` | GET | `/api/jobsites/{jobId}` | Captured |
-| `jobs.accountingLink` | GET | `/api/Accounting/{jobId}/LinkedEntityInfo` | Captured |
-| `jobs.create` | | `/api/jobsites/Add` (JS backlog) | **not_captured** |
-| `jobs.update` | | Job Info Save not clicked | **not_captured** |
+| `jobs.accountingLink` | GET | `/api/Accounting/{jobId}/LinkedEntityInfo` | Captured (Accounting) |
+| Risk / insurance | | Job page companion on overnight pass | Read with `jobs.get` / Accounting. Do not invent a second URL |
+| `jobs.create` | | JS backlog `/api/jobsites/Add`, `/api/jobsites/DefaultInfo`. UI `/app/JobPage/0/1?openCondensed=true` | **not_captured** |
+| `jobs.update` | | Job Info Save was not clicked | **not_captured** |
+
+---
 
 ## Lead Opportunities
+
+Only Sales surface we use. Related URLs (`/app/leads/activities`, map, calendar, proposals) stay out of scope.
 
 | Verb | Method | Path | Status |
 | --- | --- | --- | --- |
 | `leads.list` | POST | `/api/Leads/Grid` | Captured |
-| `leads.get` | GET | `/api/Leads/{id}` | Captured |
+| `leads.get` | GET | `/api/Leads/{id}` | Captured. `canConvertToJob` may be present |
 | `leads.defaults` | GET | `/api/Leads/Defaults` | Captured |
-| `leads.create` / `update` | | | **not_captured** |
-| `leads.convertToJob` | | `canConvertToJob` on GET | **send_disabled** |
+| `leads.create` / `leads.update` | | Likely `POST`/`PUT /api/Leads` | **not_captured**. Do not submit leftover `/Lead/0` from 2026-09-02 |
+| `leads.convertToJob` | | Creates a real job | **send_disabled** |
 
-Related Sales URLs (`/app/leads/activities` etc.) stay out of scope.
+---
 
 ## Contacts
 
@@ -44,9 +69,13 @@ Related Sales URLs (`/app/leads/activities` etc.) stay out of scope.
 | --- | --- | --- | --- |
 | `contacts.list` | POST | `/api/Contacts/Grid` | Captured |
 | `contacts.get` | GET | `/api/Contacts/{id}/Details` | Captured. `id=0` = add form |
-| `contacts.create` / `update` | | | **not_captured** |
+| `contacts.create` / `update` | | | **not_captured**. Brad’s go. Gateway takes this over from Bades |
+
+---
 
 ## Owner invoices (progress claims)
+
+UI: `/app/OwnerInvoices`, `/app/OwnerInvoices/OwnerInvoice/{invoiceId}/{jobId}/false` (`0` = new).
 
 | Verb | Method | Path | Status |
 | --- | --- | --- | --- |
@@ -54,44 +83,53 @@ Related Sales URLs (`/app/leads/activities` etc.) stay out of scope.
 | `invoices.get` | GET | `/apix/v3/Invoices/get-invoice?invoiceId=&job=` | Captured |
 | `invoices.accountingStatus` | GET | `/api/accounting/GetEntityAccountingStatus?...entityType=3` | Captured |
 | `invoices.changes` | GET | `/apix/v2/EntityChangeTracking/entity-changes` | Captured |
-| `invoices.saveDraft` | | Save was not in the DOM on the Ranchlands draft tab | **not_captured** |
+| `invoices.saveDraft` | | Save was **not** in the DOM on the Ranchlands draft tab | **not_captured** |
 | `invoices.addLines` | | JS: `/api/LineItems/EntityAttachmentsToInvoice` | **not_captured** |
 | `invoices.send` | | | **send_disabled** |
 
-UI: `/app/OwnerInvoices`, `/app/OwnerInvoices/OwnerInvoice/{invoiceId}/{jobId}/false` (`0` = new).
-Custom invoice # unique per jobsite. GST tax group **78952** when the tax engine is on (`GET /api/TaxGroups/Dropdown`).
+Custom invoice # must be unique per jobsite. Toast: `The Custom Invoice # has already been used for this jobsite`. ID input is flaky — re-read before save.
+
+**GST on owner invoices (not COs):** tax group **78952** (GST 10%) when the tax engine is on. Confirm `GET /api/TaxGroups/Dropdown`. This is **not** the change-order dummy-line pattern.
+
+---
 
 ## Change orders / variations
+
+Most complete writes. Kolodong pattern.
 
 | Verb | Method | Path | Content-Type | Status |
 | --- | --- | --- | --- | --- |
 | `variations.list` | POST | `/api/ChangeOrders/Grid` | json | Captured |
 | `variations.get` | GET | `/api/ChangeOrders/{id}/changeOrder?presentingScreen=0&isMobile=false` | | Captured |
-| `variations.saveDraftHeader` | PUT | `/api/ChangeOrders/{id}/Update` | json | Captured. `approvalStatus` 0 |
-| `variations.updateLine` | PUT | `/apix/v2/LineItems/update-change-order-line-item` | **merge-patch+json** | Captured |
-| `variations.addLines` | POST | `/apix/v2/LineItems/add-change-order-line-items` | json (merge-patch not required) | Captured |
-| `variations.deleteLines` | DELETE | `/apix/v2/LineItems/delete-change-order-line-items` | json | Captured |
+| `variations.saveDraftHeader` | PUT | `/api/ChangeOrders/{id}/Update` | json | **Fired.** Keep `approvalStatus` 0 |
+| `variations.updateLine` | PUT | `/apix/v2/LineItems/update-change-order-line-item` | **merge-patch+json** | **Fired** |
+| `variations.addLines` | POST | `/apix/v2/LineItems/add-change-order-line-items` | json (merge-patch not required) | **Fired** |
+| `variations.deleteLines` | DELETE | `/apix/v2/LineItems/delete-change-order-line-items` | json | **Fired** |
 | `variations.createDraft` | | `GET /api/ChangeOrders/Defaults`, `/apix/v2/ChangeOrders/{id}/create-draft` | | **not_captured** |
 | `variations.notifyOwners` | | JS `notify-owners` | | **send_disabled** |
 
-### GST rule (locked, Wattle Court COs)
+### GST rule (locked) + restore
 
-Native tax does **not** persist (`effectiveTaxVersion=0`, `taxGroupId` null, `POST .../bulk-update-tax-rate` → **500**). `tax_engine_unusable` if asked to use it.
+Native tax **does not persist** on observed COs (`effectiveTaxVersion=0`, `taxGroupId` null). `POST .../bulk-update-tax-rate` → **500**. Tax group **78952** does **not** persist on change orders. Do not send `taxGroupId: -1`. Gateway returns `tax_engine_unusable` if asked to use the native engine.
 
-Dummy line:
+GST is a **dummy line**:
 
-- Cost code **4000 GST** (`costCode` numeric id **17072421**, not `costCodeId`)
+- Cost code title **4000 GST**. Field is `costCode` (observed numeric id **17072421**), **not** `costCodeId`
+- Resolve via `POST /api/Search?limit=10` `{search:"4000 GST", jobIds, categories:[30]}` before add. Fallback `17072421` only after search misses (this builder)
 - Title `[GST001] GST on Total Owner Price`
-- `unitCost` `0.10`, `quantity` = owner price of the real lines (1/11 of GST-inclusive total)
-- `taxGroupId`: **null** (do not send `-1`)
+- `unitCost` `0.10`, `quantity` = **exclusive owner price** of the real lines (1/11 of GST-inclusive total)
+- Kolodong check: exclusive **2039.50** → GST **203.95** → inclusive **2243.45**. Never builder cost
+- `taxGroupId`: **null**
 - `pageTypeEnum`: **6**
 - Do **not** send `costCodeId`, `costItemId`, `lineItemType`, `itemTitle`, `markupColumn` on add (those 500)
 
-GST must be 1/11 of **owner** price, never builder cost.
+After line edits, recompute the dummy line. Restore means: if a human or a failed tax POST wiped GST, `variations.recomputeGst` puts the dummy line back from owner price.
 
-Cost-code search: `POST /api/Search?limit=10` `{search, jobIds, categories:[30]}`.
+---
 
-## Bills
+## Bills (project AP in BT)
+
+Xero remains the pay path. Never pay from the gateway.
 
 | Verb | Method | Path | Status |
 | --- | --- | --- | --- |
@@ -99,28 +137,41 @@ Cost-code search: `POST /api/Search?limit=10` `{search, jobIds, categories:[30]}
 | `bills.tabCounts` | POST | `/apix/v2/Bills/tab-counts` | Captured |
 | `bills.get` | GET | `/api/v1/bills/{id}` | Captured |
 | `bills.file` | GET | `/api/files/{id}` / `preview` | Captured |
-| `bills.create` | POST | `/api/v1/bills?jobId=` | Captured in this repo. Draft, never pay |
+| `bills.create` | | Old sidecar used `POST /api/v1/bills`. **Not fired** on this overnight pass | **not_captured** |
 | `bills.update` | | | **not_captured** |
-| `bills.markReadyForPayment` | | `canMarkReadyForPayment` | **send_disabled**. Xero pays |
+| `bills.markReadyForPayment` | | `canMarkReadyForPayment` exists | **send_disabled** |
+
+If a create payload is ever captured: `readyForPayment`, `payInFull`, `payOnline`, `sendToAccounting` must stay false.
+
+---
 
 ## Purchase orders
 
 | Verb | Method | Path | Status |
 | --- | --- | --- | --- |
 | `pos.list` | POST | `/api/PurchaseOrders/Grid` | Captured |
-| `pos.get` | GET | `/api/PurchaseOrders/{id}` | Captured. Linked bills/bids/approvals are read from this payload |
-| `pos.create` / `update` | | | **not_captured**. Do not auto-approve |
+| `pos.get` | GET | `/api/PurchaseOrders/{id}` | Captured |
+| `pos.linkedBills` | GET | `/api/PurchaseOrders/{id}/LinkedBills` | Captured (overnight) |
+| `pos.linkedBids` | GET | `/api/PurchaseOrders/{id}/linked-bids` | Captured (overnight) |
+| `pos.approvals` | GET | `/api/PurchaseOrders/{id}/EntityApprovals` | Captured (overnight). Do not auto-approve |
+| `pos.create` / `update` | | | **not_captured** |
 
-## Estimates
+Project expenses only. Never workers comp / icare / tax / payroll.
+
+---
+
+## Estimates / worksheet
 
 | Verb | Method | Path | Status |
 | --- | --- | --- | --- |
-| `estimates.worksheet` | GET | `/api/Proposals/{jobId}/Worksheet` | Captured |
+| `estimates.worksheet` | GET | `/api/Proposals/{jobId}/Worksheet` | Captured. Read-only |
 | `estimates.updateLine` | PUT | `/apix/v2/LineItems/update-estimate-line-item` | JS only, **not_captured** |
 | `estimates.addLines` | POST | `/apix/v2/LineItems/add-estimate-line-items` | JS only, **not_captured** |
 | `estimates.sendToBudget` | | `isSentToBudget` | **send_disabled** |
 
-Respect `worksheetLocked`.
+Respect `worksheetLocked`. Budget lock can hurt jobs.
+
+---
 
 ## Documents
 
@@ -131,6 +182,8 @@ Respect `worksheetLocked`.
 | `docs.file` | GET | `/api/files/{id}` | Captured |
 | `docs.upload` | | | **not_captured** |
 
+---
+
 ## Job costing
 
 | Verb | Method | Path | Status |
@@ -138,11 +191,27 @@ Respect `worksheetLocked`.
 | `costing.header` | POST | `/apix/v2/JobCostingBudget` | Captured |
 | `costing.views` | GET | `/apix/v3/JobCostingBudget/{jobId}` | Captured |
 | `costing.lines` | POST | `/apix/v2/JobCostingBudget/line-items` | Captured |
+| `costing.searchCostCodes` | POST | `/api/Search?limit=10` `{search, jobIds, categories:[30]}` | Captured |
 | writes | | | Out of scope (budget lock) |
 
-## Out of scope
+---
 
-Warranty, Service, full GL, client portal admin, Schedule, Selections, RFIs, Time Clock, Bids, lead activities/map/calendar/proposals, daily logs, tasks, plans, messages, Mixpanel/Datadog/Sentry/Qualtrics.
+## Addendum — modules touched but not mapped
+
+Schedule, Selections, RFIs, Time Clock, and Bids were opened on the overnight pass and **not** mapped. Leave them **not_captured**. Do not implement.
+
+Skip unused: Warranty (0 rows), Service (no nav), full GL, client portal admin, lead activities/map/calendar/proposals, daily logs, tasks, plans, messages, Mixpanel / Datadog / Sentry / Qualtrics.
+
+APIx writes often use `application/merge-patch+json`. `/api/*` grids use `application/json`.
+
+---
+
+## Safety
+
+- Default every write to Draft / Not sent
+- `BT_GATEWAY_ENABLE_SEND=false`
+- On `needsToRelogin: true` or 401: stop writes, `auth_required`
+- Conflict: if BT changed after last pull, do not overwrite
 
 ## Capture appends
 

@@ -4,9 +4,11 @@ import {
   buildGstDummyLine,
   gstFromExclusiveOwnerPrice,
   gstFromInclusiveOwnerTotal,
+  inclusiveFromExclusive,
   isGstDummyLine,
   ownerInvoiceCustomId,
   ownerPriceOfRealLines,
+  pickGstCostCodeFromSearch,
   recomputeGstDummyLine,
 } from "../src/gst.js";
 import { GST_COST_CODE, GST_LINE_TITLE } from "../src/config.js";
@@ -14,11 +16,12 @@ import { GST_COST_CODE, GST_LINE_TITLE } from "../src/config.js";
 describe("GST dummy-line math", () => {
   it("uses owner price, never builder cost (Kolodong plumbing bug)", () => {
     const lines = [
-      { title: "Plumbing extra", ownerPrice: 11000, builderCost: 7000, quantity: 1, unitCost: 7000 },
+      { title: "Plumbing extra", ownerPrice: 2039.5, builderCost: 9999, quantity: 1, unitCost: 9999 },
     ];
-    expect(ownerPriceOfRealLines(lines)).toBe(11000);
-    expect(gstFromExclusiveOwnerPrice(11000)).toBe(1100);
-    expect(gstFromInclusiveOwnerTotal(12100)).toBe(1100);
+    expect(ownerPriceOfRealLines(lines)).toBe(2039.5);
+    expect(gstFromExclusiveOwnerPrice(2039.5)).toBe(203.95);
+    expect(inclusiveFromExclusive(2039.5)).toBe(2243.45);
+    expect(gstFromInclusiveOwnerTotal(2243.45)).toBe(203.95);
   });
 
   it("quantity is exclusive owner price; unitCost is 0.10", () => {
@@ -65,6 +68,14 @@ describe("GST dummy-line math", () => {
     expect(isGstDummyLine({ title: "[GST001] GST on Total Owner Price" })).toBe(true);
     expect(isGstDummyLine({ costCode: GST_COST_CODE })).toBe(true);
     expect(isGstDummyLine({ title: "Plumbing" })).toBe(false);
+  });
+
+  it("resolves 4000 GST from a Search payload", () => {
+    expect(
+      pickGstCostCodeFromSearch({
+        data: { results: [{ title: "4000 GST", costCode: 42, costCodeId: 99 }] },
+      }),
+    ).toBe(42);
   });
 
   it("builds the Wattle Court owner-invoice custom id pattern", () => {

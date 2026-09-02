@@ -3,6 +3,7 @@ import { VERB_BY_HTTP, VERB_BY_NAME, VERBS } from "./catalog.js";
 import type { GatewayConfig } from "./config.js";
 import { GatewayError, isGatewayError } from "./errors.js";
 import { invokeByName } from "./invoke.js";
+import { parseVerbArgs } from "./schemas.js";
 import type { BtAdapter } from "./adapter.js";
 import type { GatewayStore } from "./store.js";
 import "./verbs.js";
@@ -19,12 +20,19 @@ export function createHttpApp(
       await next();
       return;
     }
-    if (!config.gatewayToken) {
-      await next();
-      return;
+    const expected = config.gatewayToken?.trim() ?? "";
+    if (!expected) {
+      return c.json(
+        {
+          ok: false,
+          error: "auth_required",
+          message: "BT_GATEWAY_TOKEN is required. HTTP /v1 fails closed.",
+        },
+        401,
+      );
     }
     const token = c.req.header("x-bt-gateway-token") ?? c.req.header("authorization")?.replace(/^Bearer\s+/i, "");
-    if (token !== config.gatewayToken) {
+    if (token !== expected) {
       return c.json({ ok: false, error: "auth_required", message: "Invalid BT_GATEWAY_TOKEN" }, 401);
     }
     await next();
@@ -46,7 +54,8 @@ export function createHttpApp(
   app.post("/v1/invoke", async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
     const verb = String(body.verb ?? "");
-    const args = (body.args as Record<string, unknown> | undefined) ?? {};
+    const rawArgs = (body.args as Record<string, unknown> | undefined) ?? {};
+    const args = verb ? parseVerbArgs(verb, rawArgs) : rawArgs;
     return run(c, verb, args);
   });
 
@@ -58,7 +67,7 @@ export function createHttpApp(
         const parsed = await c.req.json().catch(() => ({}));
         body = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
       }
-      const args = { ...query, ...body };
+      const args = parseVerbArgs(spec.verb, { ...query, ...body });
       return run(c as never, spec.verb, args);
     };
     if (spec.httpMethod === "GET") app.get(spec.httpPath, handler);

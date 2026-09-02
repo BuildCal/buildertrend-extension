@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderMapAppend, sanitizeCapture } from "../src/capture.js";
+import { assertDedicatedGatewayProfile, renderMapAppend, sanitizeCapture } from "../src/capture.js";
 
 describe("capture sanitizer", () => {
   it("strips cookies and keeps method/path/keys", () => {
@@ -44,5 +44,14 @@ describe("capture sanitizer", () => {
     ]);
     expect(md).toContain("POST /apix/v2/LineItems/add-change-order-line-items");
     expect(md).not.toMatch(/cookie/i);
+  });
+
+  it("refuses a human Chrome profile and unmarked paths", () => {
+    expect(() => assertDedicatedGatewayProfile("/home/me/.config/google-chrome")).toThrow(/human/i);
+    expect(() =>
+      assertDedicatedGatewayProfile("/tmp/chrome-daily", "/tmp/chrome-daily"),
+    ).toThrow(/Wattle Court/i);
+    expect(() => assertDedicatedGatewayProfile("/tmp/random-profile")).toThrow(/prove/i);
+    expect(() => assertDedicatedGatewayProfile("/var/lib/bt-gateway/chrome-profile")).not.toThrow();
   });
 });
