@@ -287,10 +287,10 @@ export const VERBS: VerbSpec[] = [
     description: "Save owner-invoice draft. Path still unknown — do not guess. Never Send.",
     discovery: {
       ui: "/app/OwnerInvoices/OwnerInvoice/{invoiceId}/{jobId}/false",
-      click: "Open a sandbox owner-invoice draft. Capture Save without Send. Re-read custom invoice # before save — the input is flaky.",
-      sandboxHint: "Sandbox draft. Leave Not sent.",
+      click: "Open a sandbox owner-invoice draft on a signed-in dedicated gateway session. Capture Save without Send. Re-read custom invoice # before save — the input is flaky.",
+      sandboxHint: "Sandbox draft. Leave Not sent. /false stays draft.",
       expectedPaths: ["some invoice save PUT — unstable in prior notes"],
-      notes: "Custom invoice # must be unique per jobsite. Owner-invoice GST uses the tenant TaxGroups dropdown when the tax engine is on — not the change-order dummy-line pattern.",
+      notes: "Custom invoice # must be unique per jobsite. Owner-invoice GST uses GET /api/TaxGroups/Dropdown at runtime when the tax engine is on — not the change-order dummy-line pattern. 3 Sep 2026 dedicated-profile capture redirected to Auth0 (auth_required); no Save fired. Do not invent the PUT body.",
     },
   },
   {
@@ -300,12 +300,13 @@ export const VERBS: VerbSpec[] = [
     httpMethod: "POST",
     kind: "write",
     captured: false,
-    description: "Add lines / attachments to an owner invoice.",
+    description: "Add lines / attachments to an owner invoice. Not captured — JS path is a hint only.",
     discovery: {
       ui: "Owner invoice draft",
-      click: "Add a line or attachment and Save (not Send).",
+      click: "Add a line or attachment and Save (not Send) on a signed-in dedicated gateway session.",
       sandboxHint: "Same draft as invoices.saveDraft.",
       expectedPaths: ["/api/LineItems/EntityAttachmentsToInvoice"],
+      notes: "JS string only until a real request fires. 3 Sep 2026 dedicated-profile capture was auth_required. Confirm method, path, content-type, and body before implementing.",
     },
   },
   {

@@ -6,8 +6,8 @@ Use the gateway Chrome profile only. One draft save each. Leave **Not sent**.
 
 | Verb | UI | Exact click | Expected path (hint only) |
 | --- | --- | --- | --- |
-| `invoices.saveDraft` | `/app/OwnerInvoices/OwnerInvoice/{invoiceId}/{jobId}/false` | Open a sandbox owner-invoice draft. Re-read the custom invoice # (the input is flaky). Click **Save**, not Send. | Prior notes mentioned “some invoice save PUT” — unstable. Capture it. |
-| `invoices.addLines` | Same draft | Add one line or attachment, Save (not Send). | JS: `/api/LineItems/EntityAttachmentsToInvoice` |
+| `invoices.saveDraft` | `/app/OwnerInvoices/OwnerInvoice/{invoiceId}/{jobId}/false` | Open a sandbox owner-invoice draft on a **signed-in** dedicated gateway profile. Re-read the custom invoice # (the input is flaky). Click **Save**, not Send. | Prior notes mentioned “some invoice save PUT” — unstable. **Verify by capture.** 3 Sep 2026 Cloud Agent dedicated-profile attempt → Auth0 login (`auth_required`). No write fired. |
+| `invoices.addLines` | Same draft | Add one line or attachment, Save (not Send). | JS: `/api/LineItems/EntityAttachmentsToInvoice` — not fired 3 Sep 2026. Confirm method / path / content-type / body from a real request. |
 | `leads.create` / `leads.update` | Lead Opportunities add form from `GET /api/Leads/Defaults` | Fill Defaults, save a clearly fake sandbox lead. **Do not** submit leftover `/Lead/0` tabs. | Likely `POST`/`PUT /api/Leads` or `PUT /api/Leads/{id}` |
 | `contacts.create` / `contacts.update` | Contacts add form (`GET /api/Contacts/0/Details`) | Add one sandbox contact. | Unknown POST/PUT |
 | `variations.createDraft` | Change Orders → add new on a sandbox job | Open new CO so Defaults + create-draft fire. Leave Draft. | `GET /api/ChangeOrders/Defaults`, `/apix/v2/ChangeOrders/{id}/create-draft` |

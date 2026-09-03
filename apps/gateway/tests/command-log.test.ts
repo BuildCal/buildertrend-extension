@@ -22,5 +22,9 @@ describe("command log", () => {
       code: "not_captured",
     });
     expect(store.commands.at(-1)?.errorCode).toBe("not_captured");
+    await expect(invoke("invoices.addLines", { invoiceId: 1 })).rejects.toMatchObject({
+      code: "not_captured",
+    });
+    expect(store.commands.at(-1)?.errorCode).toBe("not_captured");
   });
 });

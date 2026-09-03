@@ -55,6 +55,21 @@ describe("HTTP /v1", () => {
     const body = (await res.json()) as { error: string; discovery: { click: string } };
     expect(body.error).toBe("not_captured");
     expect(body.discovery.click).toMatch(/Save/i);
+    expect(body.discovery.click).toMatch(/without Send/i);
+  });
+
+  it("returns not_captured for invoice add-lines until a real request fires", async () => {
+    const { adapter, store, config } = createHarness(undefined, { gatewayToken: "secret" });
+    const app = createHttpApp(config, adapter, store);
+    const res = await app.request("/v1/invoices/add-lines", {
+      method: "POST",
+      headers: { "content-type": CONTENT_JSON, "x-bt-gateway-token": "secret" },
+      body: JSON.stringify({ invoiceId: 1, dry_run: false }),
+    });
+    expect(res.status).toBe(501);
+    const body = (await res.json()) as { error: string; discovery: { expectedPaths?: string[] } };
+    expect(body.error).toBe("not_captured");
+    expect(body.discovery.expectedPaths).toContain("/api/LineItems/EntityAttachmentsToInvoice");
   });
 
   it("keeps health open without a token", async () => {

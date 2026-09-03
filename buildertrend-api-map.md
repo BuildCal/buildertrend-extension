@@ -91,13 +91,19 @@ UI: `/app/OwnerInvoices`, `/app/OwnerInvoices/OwnerInvoice/{invoiceId}/{jobId}/f
 | `invoices.get` | GET | `/apix/v3/Invoices/get-invoice?invoiceId=&job=` | Captured |
 | `invoices.accountingStatus` | GET | `/api/accounting/GetEntityAccountingStatus?...entityType=3` | Captured |
 | `invoices.changes` | GET | `/apix/v2/EntityChangeTracking/entity-changes` | Captured |
-| `invoices.saveDraft` | | Save was **not** in the DOM on the observed draft tab | **not_captured** |
-| `invoices.addLines` | | JS: `/api/LineItems/EntityAttachmentsToInvoice` | **not_captured** |
+| `invoices.saveDraft` | | Save was **not** in the DOM on the overnight draft tab. 3 Sep 2026 dedicated-profile capture of `/app/OwnerInvoices/OwnerInvoice/{invoiceId}/{jobId}/false` redirected to Auth0 login (`auth_required`). No Save click. No write fired. | **not_captured** |
+| `invoices.addLines` | | JS hint only: `/api/LineItems/EntityAttachmentsToInvoice`. Not fired 3 Sep 2026 (same `auth_required`). Confirm method, path, content-type, and body from a real request. | **not_captured** |
 | `invoices.send` | | | **send_disabled** |
 
 Custom invoice # must be unique per jobsite. Toast: `The Custom Invoice # has already been used for this jobsite`. ID input is flaky — re-read before save.
 
-**GST on owner invoices (not COs):** use the tenant’s tax group from `GET /api/TaxGroups/Dropdown` when the tax engine is on. This is **not** the change-order dummy-line pattern.
+**GST on owner invoices (not COs):** use the tenant’s tax group from `GET /api/TaxGroups/Dropdown` when the tax engine is on. This is **not** the change-order dummy-line pattern. Do not hard-code a tax group id; resolve at runtime.
+
+### Owner-invoice write capture (3 Sep 2026)
+
+Dedicated gateway profile only (`bt-gateway` / `gateway-profile` / `.bt-gateway-profile`). Cloud Agent attempt opened the draft UI (`/false` = stay draft) and was sent to `login.buildertrend.com`. Sidecar on this VM was not running. **No** invoice save PUT and **no** `EntityAttachmentsToInvoice` request. Do not invent those bodies. Do not reuse a guessed invoices-v3 PUT from prior notes.
+
+Next capture must use a **signed-in** dedicated gateway session (sidecar cookies or the same profile after human login / 2FA). Click **Save**, never Send / pay / notify / mark ready. Then append method / path / content-type / JSON keys here and implement the verbs.
 
 ---
 

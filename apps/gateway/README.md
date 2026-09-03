@@ -95,8 +95,8 @@ Uncaptured writes return `not_captured` plus the UI click needed to capture them
 
 ```bash
 pnpm --filter gateway capture -- \
-  --url https://buildertrend.net/app/OwnerInvoices \
+  --url https://buildertrend.net/app/OwnerInvoices/OwnerInvoice/{invoiceId}/{jobId}/false \
   --profile /var/lib/bt-gateway/chrome-profile
 ```
 
-Perform **one** draft save. The harness records method, path, content-type, and JSON keys (cookies stripped) and appends `buildertrend-api-map.md`. Then implement the verb, replay `dry_run`, then one real draft, GET to verify, leave **Not sent**.
+The profile must already be signed in. A 3 Sep 2026 dedicated-profile attempt without a session redirected to Auth0 (`auth_required`) and fired no invoice write. Perform **one** draft **Save** (never Send). The harness records method, path, content-type, and JSON keys (cookies stripped) and appends `buildertrend-api-map.md`. Then implement the verb, replay `dry_run`, then one real draft, GET to verify, leave **Not sent**.
