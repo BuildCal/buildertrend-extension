@@ -33,7 +33,10 @@ describe("safety locks", () => {
     ]) {
       expect(verbs).toContain(required);
     }
-    expect(VERBS.find((v) => v.verb === "bills.create")?.captured).toBe(false);
+    expect(VERBS.find((v) => v.verb === "bills.create")?.captured).toBe(true);
+    expect(VERBS.find((v) => v.verb === "bills.update")?.captured).toBe(true);
+    expect(VERBS.find((v) => v.verb === "bills.attach")?.captured).toBe(true);
+    expect(VERBS.find((v) => v.verb === "bills.linkPurchaseOrder")?.captured).toBe(false);
     for (const spec of remainingCaptures()) {
       expect(spec.discovery?.click).toBeTruthy();
     }
@@ -48,15 +51,18 @@ describe("safety locks", () => {
     expect(() => assertSafePath("/apix/v2/ChangeOrders/1/notify-owners", true)).not.toThrow();
   });
 
-  it("bills.create is not_captured until a real capture exists", async () => {
+  it("bills.create dry_run does not write; sandbox is required for a real create", async () => {
     const { calls, invoke } = createHarness();
+    const preview = await invoke("bills.create", { jobId: 9, vendorId: 3, dry_run: true });
+    expect(preview.dry_run).toBe(true);
+    expect(calls).toHaveLength(0);
     await expect(
       invoke("bills.create", { jobId: 9, vendorId: 3, dry_run: false }),
-    ).rejects.toMatchObject({ code: "not_captured" });
+    ).rejects.toMatchObject({ code: "sandbox_required" });
     expect(calls).toHaveLength(0);
   });
 
-  it("if a create payload is ever sent, pay flags stay false", () => {
+  it("if a create payload is ever sent, pay flags stay false and draft flags match capture", () => {
     const body = billCreatePayload(
       {
         vendorId: 3,
@@ -68,6 +74,11 @@ describe("safety locks", () => {
       },
       9,
     );
+    expect(body.status).toBe(9);
+    expect(body.saveAsDraft).toBe(false);
+    expect(body.saveDraftToJob).toBe(false);
+    expect(body.purchaseOrderId).toBe(-1);
+    expect(body.isCreateNewFromPO).toBe(false);
     expect(body.readyForPayment).toBe(false);
     expect(body.payInFull).toBe(false);
     expect(body.payOnline).toBe(false);

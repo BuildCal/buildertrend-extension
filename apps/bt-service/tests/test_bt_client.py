@@ -88,6 +88,35 @@ def test_send_paths_are_blocked(mock_settings):
             client._request("POST", "/apix/v2/ChangeOrders/1/notify-owners", json_body={})
 
 
+def test_multipart_tempfile_does_not_send_json_body(mock_settings):
+    with patch("app.clients.bt_client.cffi_requests.Session") as session_cls:
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.headers = {"content-type": "application/json"}
+        resp.json.return_value = {"success": True, "data": {"id": 1, "tempId": "t"}}
+        session_mock = _session(resp)
+        session_mock.headers = {"content-type": "application/json", "portaltype": "1"}
+        session_cls.return_value = session_mock
+
+        client = BTClient(cookies={})
+        client.upload_bill_temp_file(
+            9,
+            filename="test-invoice-1.pdf",
+            content=b"%PDF-1.4 fixture",
+        )
+        kwargs = session_mock.request.call_args.kwargs
+        assert "files" in kwargs
+        field, uploaded = kwargs["files"][0]
+        assert field == "fileList"
+        assert uploaded[0] == "test-invoice-1.pdf"
+        assert "data" not in kwargs
+        headers = {str(k).lower(): v for k, v in kwargs["headers"].items()}
+        assert headers.get("content-type") != "application/json"
+        path = session_mock.request.call_args.args[1]
+        assert path.endswith("/api/documents/61/tempFile")
+        assert "ocr-upload" not in path
+
+
 def test_needs_to_relogin_is_auth_error(mock_settings):
     with patch("app.clients.bt_client.cffi_requests.Session") as session_cls:
         resp = MagicMock()

@@ -465,22 +465,35 @@ export const VERBS: VerbSpec[] = [
     description: "Bill file / preview.",
   },
   {
+    verb: "bills.defaults",
+    tool: "bt_bills_defaults",
+    httpPath: "/v1/bills/defaults",
+    httpMethod: "GET",
+    kind: "read",
+    captured: true,
+    description:
+      "Bill create seed (GET /api/v1/bills/defaultinfo). Cost codes, customFields, lienWaiverFormId — copy at runtime, never hard-code.",
+  },
+  {
+    verb: "bills.availablePurchaseOrders",
+    tool: "bt_bills_available_purchase_orders",
+    httpPath: "/v1/bills/available-purchase-orders",
+    httpMethod: "GET",
+    kind: "read",
+    captured: true,
+    description:
+      "Open POs for a vendor on a job. Captured read. A real PO link still needs GetBillMapping (not captured).",
+  },
+  {
     verb: "bills.create",
     tool: "bt_bills_create",
     httpPath: "/v1/bills/create",
     httpMethod: "POST",
     kind: "write",
-    captured: false,
+    captured: true,
     sandboxRequired: true,
     description:
-      "Create a project bill as draft. Not captured on the used-module overnight pass. Never pay.",
-    discovery: {
-      ui: "Bills — add on a sandbox job",
-      click:
-        "Create a sandbox project-expense draft, Save. Do not mark ready for payment. Never workers comp / icare / tax / payroll.",
-      sandboxHint: "Project expense only.",
-      expectedPaths: ["/api/v1/bills"],
-    },
+      "Create a project-expense bill as Draft (status 9): GET defaultinfo → POST /api/v1/bills → PUT save-draft with exclusive amounts. Optional PDF attach. Never pay / RFP / accounting.",
   },
   {
     verb: "bills.update",
@@ -488,13 +501,37 @@ export const VERBS: VerbSpec[] = [
     httpPath: "/v1/bills/update",
     httpMethod: "POST",
     kind: "write",
+    captured: true,
+    description:
+      "Save draft (PUT /api/v1/bills/{id}, saveAsDraft true, status 9). Exclusive amounts only. Never Ready-for-Payment.",
+  },
+  {
+    verb: "bills.attach",
+    tool: "bt_bills_attach",
+    httpPath: "/v1/bills/attach",
+    httpMethod: "POST",
+    kind: "write",
+    captured: true,
+    description:
+      "Attach one PDF to a bill: tempFile (multipart) then EntityDocs documentType 58. Not ocr-upload. Not on bill POST/PUT.",
+  },
+  {
+    verb: "bills.linkPurchaseOrder",
+    tool: "bt_bills_link_purchase_order",
+    httpPath: "/v1/bills/link-purchase-order",
+    httpMethod: "POST",
+    kind: "write",
     captured: false,
-    description: "Update a bill. Not captured. Never pay.",
+    description:
+      "Link a real PO onto a bill. GetBillMapping was not captured — purchaseOrderId stays -1 (none).",
     discovery: {
-      ui: "Bills — open a sandbox draft",
-      click: "Edit a field, Save. Do not mark ready for payment.",
-      sandboxHint: "Project expense only. Never workers comp / icare / tax / payroll.",
-      expectedPaths: ["/api/v1/bills/{id}"],
+      ui: "Bill — Purchase Order dropdown",
+      click:
+        "Select a real PO (not -- None Selected --) on a sandbox bill so GetBillMapping fires. Leave Draft. Do not mark ready for payment.",
+      sandboxHint: "Project expense only. Do not guess isCreateNewFromPO: true.",
+      expectedPaths: ["/api/v1/Bills/GetBillMapping"],
+      notes:
+        "GET get-available-purchase-orders is captured. Linking is not. purchaseOrderId: -1 means none.",
     },
   },
   {
@@ -504,7 +541,8 @@ export const VERBS: VerbSpec[] = [
     httpMethod: "POST",
     kind: "send",
     captured: false,
-    description: "canMarkReadyForPayment exists. Do not call unless this send tool is enabled. Pay from your accounting system.",
+    description:
+      "Separate UI control (#markReadyForPaymentFromDraftButtonId). Do not call. Pay from your accounting system.",
     discovery: {
       ui: "Bill — Mark ready for payment",
       click: "Do not click. Pay from the accounting system, not Buildertrend.",
@@ -675,7 +713,8 @@ export const VERBS: VerbSpec[] = [
     httpMethod: "POST",
     kind: "write",
     captured: false,
-    description: "Upload / add folder. Not captured.",
+    description:
+      "Upload / add folder on job documents. Not captured. Bill PDF attach is bills.attach (captured).",
     discovery: {
       ui: "Job documents — sandbox folder",
       click: "Upload a tiny test file, then implement from the capture.",

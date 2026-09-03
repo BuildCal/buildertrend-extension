@@ -8,6 +8,13 @@ export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export const CONTENT_JSON = "application/json";
 export const CONTENT_MERGE_PATCH = "application/merge-patch+json";
 
+export interface BtMultipartFile {
+  fieldName: string;
+  filename: string;
+  contentType?: string;
+  contentBase64: string;
+}
+
 export interface BtRequest {
   method: HttpMethod;
   path: string;
@@ -15,6 +22,8 @@ export interface BtRequest {
   json?: unknown;
   contentType?: string;
   raw?: boolean;
+  /** Multipart body for captured tempFile uploads. Not used for ocr-upload. */
+  multipart?: BtMultipartFile[];
 }
 
 export interface BtResponse {
@@ -87,6 +96,16 @@ export function browserHeaders(config: GatewayConfig, contentType: string): Reco
     "sec-fetch-mode": "cors",
     "sec-fetch-site": "same-origin",
   };
+}
+
+export function buildMultipartForm(files: BtMultipartFile[]): FormData {
+  const form = new FormData();
+  for (const file of files) {
+    const bytes = Buffer.from(file.contentBase64, "base64");
+    const blob = new Blob([bytes], { type: file.contentType ?? "application/pdf" });
+    form.append(file.fieldName || "fileList", blob, file.filename);
+  }
+  return form;
 }
 
 function queryString(query: BtRequest["query"]): string {
@@ -178,9 +197,15 @@ export class SidecarAdapter implements BtAdapter {
         method: req.method,
         path: req.path,
         params: req.query,
-        json_body: req.json ?? null,
-        content_type: contentTypeFor(req),
+        json_body: req.multipart?.length ? null : (req.json ?? null),
+        content_type: req.multipart?.length ? undefined : contentTypeFor(req),
         raw: Boolean(req.raw),
+        multipart_files: req.multipart?.map((file) => ({
+          field_name: file.fieldName,
+          filename: file.filename,
+          content_type: file.contentType ?? "application/pdf",
+          content_base64: file.contentBase64,
+        })),
       }),
     });
     const text = await res.text();
@@ -258,14 +283,23 @@ export class DirectAdapter implements BtAdapter {
       throw new GatewayError("auth_required", "No cookie jar loaded for direct transport");
     }
     const url = `${this.config.baseUrl}${req.path}${queryString(req.query)}`;
-    const headers = browserHeaders(configSafe(this.config), contentTypeFor(req));
+    const multipart = req.multipart?.length ? buildMultipartForm(req.multipart) : undefined;
+    const headers = browserHeaders(
+      configSafe(this.config),
+      multipart ? "multipart/form-data" : contentTypeFor(req),
+    );
     headers.cookie = this.cookieHeader;
+    if (multipart) {
+      delete headers["content-type"];
+    }
     const init: RequestInit = {
       method: req.method,
       headers,
       redirect: "manual",
     };
-    if (req.json !== undefined && req.method !== "GET") {
+    if (multipart && req.method !== "GET") {
+      init.body = multipart;
+    } else if (req.json !== undefined && req.method !== "GET") {
       init.body = JSON.stringify(req.json);
     }
     const res = await fetch(url, init);

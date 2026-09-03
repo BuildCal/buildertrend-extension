@@ -12,8 +12,7 @@ Use the gateway Chrome profile only. One draft save each. Leave **Not sent**.
 | `contacts.create` / `contacts.update` | Contacts add form (`GET /api/Contacts/0/Details`) | Add one sandbox contact. | Unknown POST/PUT |
 | `variations.createDraft` | Change Orders → add new on a sandbox job | Open new CO so Defaults + create-draft fire. Leave Draft. | `GET /api/ChangeOrders/Defaults`, `/apix/v2/ChangeOrders/{id}/create-draft` |
 | `pos.create` / `pos.update` | Purchase Orders on a sandbox job | Draft PO for a **project** expense. Do not approve. Never workers comp / tax / payroll. | `/api/PurchaseOrders` |
-| `bills.create` | Bills — add on a sandbox job | Create a **project-expense** draft, Save. Do not mark ready for payment. Never workers comp / tax / payroll. | Hint only: `/api/v1/bills` (old sidecar). Must recapture. |
-| `bills.update` | Bills sandbox draft | Edit a restoreable field, Save. Do not mark ready for payment. | `/api/v1/bills/{id}` |
+| `bills.linkPurchaseOrder` | Bill — Purchase Order dropdown | Select a **real** PO (not `-- None Selected --`) so `GetBillMapping` fires. Leave Draft. Do not mark ready for payment. | `/api/v1/Bills/GetBillMapping` — **not** fired on 2 Sep 2026. `purchaseOrderId: -1` means none. Do not guess `isCreateNewFromPO: true`. |
 | `estimates.updateLine` / `estimates.addLines` | Worksheet on an **unlocked** job | Edit or add one line, Save. Do not send to budget (`isSentToBudget`). | JS: `/apix/v2/LineItems/update-estimate-line-item`, `add-estimate-line-items` |
 | `docs.upload` | Job documents, sandbox folder | Upload a tiny test file. | `/api/files`, `/api/MediaFolders` |
 | `jobs.create` / `jobs.update` | `/app/JobPage/0/1?openCondensed=true` | Fake sandbox job, or dummy-field save then revert. Never guess the PUT body. | JS backlog: `/api/jobsites/Add`, `/api/jobsites/DefaultInfo` |

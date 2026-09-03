@@ -68,7 +68,7 @@ class BillLineItem(BaseModel):
     quantity: float = 1
     unit_cost: float
     unit_type: str = "ea"
-    cost_types: list[int] = Field(default_factory=lambda: [7])
+    cost_types: list[int] = Field(default_factory=list)
 
 
 class CreateBillRequest(BaseModel):

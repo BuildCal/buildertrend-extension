@@ -17,7 +17,16 @@ Writes that were **actually fired** this pass:
 | POST | `/api/jobpicker/GetJobPickerData` | `application/json` |
 | POST | `/api/jobpicker/SetJobPickerData` | `application/json` |
 
-All other writes below are **not_captured**. Do not invent them.
+Bill draft capture (2 Sep 2026, sandbox project-expense, status 9):
+
+| Method | Path | Content-Type |
+| --- | --- | --- |
+| POST | `/api/v1/bills?jobId=` | `application/json` |
+| PUT | `/api/v1/bills/{id}` | `application/json` |
+| POST | `/api/documents/61/tempFile?jobId=&uploadFullResPhoto=true` | `multipart/form-data` |
+| POST | `/api/Documents/EntityDocs` | `application/json` |
+
+All other writes below are **not_captured**. Do not invent them. Do not use `ocr-upload` for bill PDF attach. GetBillMapping (real PO link) was **not** fired.
 
 ---
 
@@ -136,9 +145,21 @@ Xero remains the pay path. Never pay from the gateway.
 | `bills.tabCounts` | POST | `/apix/v2/Bills/tab-counts` | Captured |
 | `bills.get` | GET | `/api/v1/bills/{id}` | Captured |
 | `bills.file` | GET | `/api/files/{id}` / `preview` | Captured |
-| `bills.create` | | Old sidecar used `POST /api/v1/bills`. **Not fired** on this overnight pass | **not_captured** |
-| `bills.update` | | | **not_captured** |
-| `bills.markReadyForPayment` | | `canMarkReadyForPayment` exists | **send_disabled** |
+| `bills.defaults` | GET | `/api/v1/bills/defaultinfo?jobId={jobId}&isBillRemainingAction=false` | Captured (2 Sep 2026). Create seed — copy `customFields` at runtime |
+| `bills.availablePurchaseOrders` | GET | `/apix/v2/Bills/get-available-purchase-orders/{vendorId}/2/{jobId}` | Captured read. Sandbox vendor returned only `{id: -1, name: "-- None Selected --"}` |
+| `bills.create` | GET + POST + PUT | defaultinfo → `POST /api/v1/bills?jobId=` → `PUT /api/v1/bills/{id}` | **Captured** (2 Sep 2026). Draft status **9**. Amounts on PUT. PDF is **not** on this POST/PUT |
+| `bills.update` | PUT | `/api/v1/bills/{id}` | **Captured** Save draft (`saveAsDraft: true`, status 9) |
+| `bills.attach` | POST + POST | `/api/documents/61/tempFile` then `/api/Documents/EntityDocs` (`documentType` 58) | **Captured**. One attach. Not `ocr-upload` |
+| `bills.linkPurchaseOrder` | | `GET /api/v1/Bills/GetBillMapping` never fired | **not_captured**. `purchaseOrderId: -1` means none. Do not guess `isCreateNewFromPO: true` |
+| `bills.markReadyForPayment` | | Separate UI `#markReadyForPaymentFromDraftButtonId` | **send_disabled** |
+
+Bills are exclusive GST only. No GST dummy line, no tax group, no inclusive `unitCost`.
+
+Captured write flags (do not “fix” these back to the old stub):
+
+- POST create: `status` **9**, `saveAsDraft` **false**, `saveDraftToJob` **false**, `purchaseOrderId` **-1**, `isCreateNewFromPO` **false**, `billId` **0**, `attachedFiles` empty, line `id` 0 / `costTypes` `[]` / amounts **0**
+- PUT save-draft: `saveAsDraft` **true**, `status` 9, line id from create, exclusive `unitCost`/`builderCost`, `costTypes` `[-1]`
+- Send/pay/approve/`billToOwner` stay **false**
 
 If a create payload is ever captured: `readyForPayment`, `payInFull`, `payOnline`, `sendToAccounting` must stay false.
 

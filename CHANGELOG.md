@@ -9,6 +9,13 @@ and this project does not yet follow SemVer releases (pre-alpha).
 
 ### Added
 
+- Captured `bills.create` + `bills.update` (Save draft) + `bills.attach`
+  from the 2 Sep 2026 sandbox pass: GET `defaultinfo` → POST `/api/v1/bills`
+  (status 9, amounts 0) → PUT save-draft (exclusive amounts,
+  `saveAsDraft: true`) → optional PDF via `tempFile` + `EntityDocs`
+  (`documentType` 58). One attach. Not `ocr-upload`. Not Ready-for-Payment.
+- Read helpers `bills.defaults` and `bills.availablePurchaseOrders`.
+  `bills.linkPurchaseOrder` stays `not_captured` until GetBillMapping fires.
 - Buildertrend Gateway (`apps/gateway`): one MCP + HTTP `/v1` surface for
   in-scope verbs. Writes default to `dry_run`. Send/pay/notify stay locked.
 - Captured variation draft + line add/update/delete with GST dummy-line
@@ -19,7 +26,7 @@ and this project does not yet follow SemVer releases (pre-alpha).
 - Sidecar `POST /internal/bt-request` with merge-patch content-type and a
   send-path denylist.
 - HTTP `/v1` fails closed without `BT_GATEWAY_TOKEN`. Per-verb MCP/HTTP Zod
-  schemas. `bills.create` is `not_captured`. GST cost-code search (no
+  schemas. GST cost-code search (no
   tenant fallback). Capture harness refuses the human Chrome profile.
 - MIT license, contributing guide, code of conduct, and security policy
 - GitHub issue and pull request templates
@@ -28,6 +35,10 @@ and this project does not yet follow SemVer releases (pre-alpha).
 
 ### Changed
 
+- Bill create payload now matches the 2 Sep 2026 capture (`status` 9,
+  `saveDraftToJob` false, `purchaseOrderId` -1, amounts on PUT). The old
+  stub guessed `status` 0 / `saveDraftToJob` true / `isCreateNewFromPO`
+  from a non-null PO id.
 - README rewritten for a public, self-hosted audience (unofficial Buildertrend disclaimer)
 - Stripped tenant/business-specific names, jobs, and ids. Builder id comes
   from GlobalInfo. GST cost code comes from Search, not a hard-coded default.
