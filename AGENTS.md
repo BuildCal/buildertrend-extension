@@ -77,6 +77,12 @@ Use the canonical URL:
 
 (The old `buildertrend-extension` URL redirects.)
 
+Before you clone again, detect an existing checkout. Use the same
+**absolute path** already used by AddMcpServer / the `buildertrend-gateway`
+connector. If that checkout is present, skip to
+**[Update an existing install](#update-an-existing-install)**. Do not clone
+a second copy. If none, continue this first-time playbook.
+
 ### 2. One short message
 
 Tell the user you will:
@@ -251,8 +257,41 @@ In plain language:
 - Never merge pull requests (the repo owner merges)
 - Never commit `.env`, cookie jars, tokens, or HAR files
 - Never invent a catalog “Buildertrend” connector
+- Never create a Grok Bot routine, cron, or scheduled `git pull`
+
+### Update an existing install
+
+Use this when the same paste prompt lands and the gateway is already on
+**Grok Bot’s computer**. First-time setup above is unchanged.
+
+1. Detect the existing checkout. Use the same **absolute path** already
+   used by AddMcpServer / the `buildertrend-gateway` connector. Do not
+   clone a second copy.
+2. If there is **no** checkout, follow the first-time playbook above.
+3. If the tree is clean, `git fetch origin` and fast-forward to
+   `origin/main`. Abort if there are local uncommitted changes to
+   **tracked** files. Do not stash `.env`. Never force-push. Never
+   `git reset --hard` if it would drop `.env` or session files.
+4. Keep `apps/gateway/.env`, `apps/bt-service/.env`, and the session
+   store. Do not overwrite secrets, cookies, or the dedicated Chrome
+   profile.
+5. Reinstall only when `pnpm-lock.yaml` or `apps/bt-service` lock/deps
+   changed (`pnpm install` / Python deps). Otherwise skip.
+6. Restart the sidecar and the MCP connector so new verbs load. Do
+   **not** call AddMcpServer a second time if `buildertrend-gateway`
+   already exists.
+7. Never create a Grok Bot routine, cron, or scheduled `git pull`.
+   Updates are on demand when the human pastes this prompt. Never pull
+   unattended. Never rebase.
+8. Never enable `BT_GATEWAY_ENABLE_SEND`. Never merge GitHub PRs.
+   Never scrape `buildertrend.net` outside this gateway.
+9. After the update, do a cheap read (`bt_session_status`). Tell the
+   user in **one short message** that they are current, or that there
+   was nothing to pull.
 
 ## Success
 
 A non-technical user who **only pasted the GitHub URL** can **list jobs**
-through Grok Bot **without opening a terminal**.
+through Grok Bot **without opening a terminal**. The same paste updates
+an existing install on demand. It does not set a Friday or unattended
+`git pull`.
