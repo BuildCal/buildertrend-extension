@@ -34,6 +34,11 @@ import {
   seedFromDefaultInfo,
 } from "./bills-payload.js";
 import {
+  INVOICE_SAVE_PATH,
+  invoiceAddLinesPayload,
+  invoiceSaveDraftPayload,
+} from "./invoices-payload.js";
+import {
   bt,
   btJson,
   guardConflict,
@@ -317,6 +322,75 @@ registerVerb("invoices.changes", async (ctx) => {
       },
     }),
   );
+});
+
+
+registerVerb("invoices.saveDraft", async (ctx) => {
+  const invoiceId = requireNumber(ctx.args, "invoiceId");
+  const jobId = optionalNumber(ctx.args, "jobId");
+  const currentRaw = await btJson(ctx, {
+    method: "GET",
+    path: "/apix/v3/Invoices/get-invoice",
+    query: { invoiceId, job: jobId ?? "" },
+  });
+  const current = unwrapData(currentRaw);
+  await guardConflict(ctx, "invoice", String(invoiceId), current);
+  const body = invoiceSaveDraftPayload(ctx.args, current, invoiceId, jobId);
+  const payload = await btJson(ctx, {
+    method: "PUT",
+    path: INVOICE_SAVE_PATH,
+    contentType: CONTENT_MERGE_PATCH,
+    json: body,
+  });
+  const data = unwrapData(payload);
+  await upsertRows(ctx, "invoice", [asRecord(data)]);
+  await ctx.store.setSyncState({
+    entityType: "invoice",
+    externalId: String(invoiceId),
+    lastPulledHash: hashEntity(data),
+    lastPulledAt: new Date().toISOString(),
+  });
+  return data;
+});
+
+registerVerb("invoices.addLines", async (ctx) => {
+  const invoiceId = requireNumber(ctx.args, "invoiceId");
+  const jobId = optionalNumber(ctx.args, "jobId");
+  const currentRaw = await btJson(ctx, {
+    method: "GET",
+    path: "/apix/v3/Invoices/get-invoice",
+    query: { invoiceId, job: jobId ?? "" },
+  });
+  const current = unwrapData(currentRaw);
+  await guardConflict(ctx, "invoice", String(invoiceId), current);
+  const lines = ctx.args.lines ?? ctx.args.ownerInvoiceLineItems ?? ctx.args.lineItems;
+  const bodyPatch = asRecord(ctx.args.body ?? {});
+  const hasLines =
+    (Array.isArray(lines) && lines.length > 0) ||
+    Array.isArray(bodyPatch.lineItems) ||
+    Array.isArray(bodyPatch.ownerInvoiceLineItems);
+  if (!hasLines) {
+    throw new GatewayError(
+      "validation",
+      "invoices.addLines requires lines (or body.lineItems / body.ownerInvoiceLineItems). UI Add-from related GET is /api/LineItems/EntityLineItemsToInvoice; the write is the same save-invoice PUT.",
+    );
+  }
+  const body = invoiceAddLinesPayload(ctx.args, current, invoiceId, jobId);
+  const payload = await btJson(ctx, {
+    method: "PUT",
+    path: INVOICE_SAVE_PATH,
+    contentType: CONTENT_MERGE_PATCH,
+    json: body,
+  });
+  const data = unwrapData(payload);
+  await upsertRows(ctx, "invoice", [asRecord(data)]);
+  await ctx.store.setSyncState({
+    entityType: "invoice",
+    externalId: String(invoiceId),
+    lastPulledHash: hashEntity(data),
+    lastPulledAt: new Date().toISOString(),
+  });
+  return data;
 });
 
 registerVerb("variations.list", async (ctx) => {

@@ -91,19 +91,23 @@ UI: `/app/OwnerInvoices`, `/app/OwnerInvoices/OwnerInvoice/{invoiceId}/{jobId}/f
 | `invoices.get` | GET | `/apix/v3/Invoices/get-invoice?invoiceId=&job=` | Captured |
 | `invoices.accountingStatus` | GET | `/api/accounting/GetEntityAccountingStatus?...entityType=3` | Captured |
 | `invoices.changes` | GET | `/apix/v2/EntityChangeTracking/entity-changes` | Captured |
-| `invoices.saveDraft` | | Save was **not** in the DOM on the overnight draft tab. 3 Sep 2026 dedicated-profile capture of `/app/OwnerInvoices/OwnerInvoice/{invoiceId}/{jobId}/false` redirected to Auth0 login (`auth_required`). No Save click. No write fired. | **not_captured** |
-| `invoices.addLines` | | JS hint only: `/api/LineItems/EntityAttachmentsToInvoice`. Not fired 3 Sep 2026 (same `auth_required`). Confirm method, path, content-type, and body from a real request. | **not_captured** |
+| `invoices.saveDraft` | PUT | `/apix/v3/Invoices/save-invoice` | **Captured** (4 Sep 2026). `application/merge-patch+json`. Force `notifyOwner`/`createInvoiceChkbox` false, `status` 1 (Draft). Never Send. |
+| `invoices.addLines` | PUT | `/apix/v3/Invoices/save-invoice` (same Save with `lineItems` / `ownerInvoiceLineItems`) | **Captured** 2026-09-04. Related picker GET `/api/LineItems/EntityLineItemsToInvoice`. JS also has GET `/api/LineItems/EntityAttachmentsToInvoice` |
 | `invoices.send` | | | **send_disabled** |
 
 Custom invoice # must be unique per jobsite. Toast: `The Custom Invoice # has already been used for this jobsite`. ID input is flaky — re-read before save.
 
 **GST on owner invoices (not COs):** use the tenant’s tax group from `GET /api/TaxGroups/Dropdown` when the tax engine is on. This is **not** the change-order dummy-line pattern. Do not hard-code a tax group id; resolve at runtime.
 
-### Owner-invoice write capture (3 Sep 2026)
+### Owner-invoice write capture (4 Sep 2026)
 
-Dedicated gateway profile only (`bt-gateway` / `gateway-profile` / `.bt-gateway-profile`). Cloud Agent attempt opened the draft UI (`/false` = stay draft) and was sent to `login.buildertrend.com`. Sidecar on this VM was not running. **No** invoice save PUT and **no** `EntityAttachmentsToInvoice` request. Do not invent those bodies. Do not reuse a guessed invoices-v3 PUT from prior notes.
+Dedicated gateway profile (`/home/box/bt-gateway-profile`). Save fired:
 
-Next capture must use a **signed-in** dedicated gateway session (sidecar cookies or the same profile after human login / 2FA). Click **Save**, never Send / pay / notify / mark ready. Then append method / path / content-type / JSON keys here and implement the verbs.
+- `PUT /apix/v3/Invoices/save-invoice` `application/merge-patch+json`
+- Keys: title, customInvoiceId, description, closingText, status, amountPaid, ownerEmail, createInvoiceChkbox, notifyOwner, customFields, attachedFiles, files, showLineItemsToOwner, groupLineItemsByCostCode, showPaymentCode, showCustomFields, showCostCodes, showCategories, showContractorCertification, showArchitectCertification, showRetainage, showStoredMaterials, showItems, showInvoiceDescription, lineItems, builderCost, unifiedDeadlineRequest, internalNotes, priceType, containerIsValid, costCodeIds, ownerInvoiceLineItems, amount, taxMethod, taxGroupId, columnPreferences, invoiceFormat, lineItemGroupStrategy, hideLaborCostAndMarkup, invoiceId, useLineItems, invoicedFromEntity, job
+- Captured Save had `notifyOwner: false`, `createInvoiceChkbox: false`, `status: 1` (Draft). Gateway forces those on every `invoices.saveDraft`.
+
+`invoices.addLines` / `EntityAttachmentsToInvoice` still **not_captured**. Capture on a **different** unsent draft — do **not** use Cubbaroo `invoiceId` 18059815 / job 41648716 (Ops filling in BT UI). Never Send / pay / notify.
 
 ---
 
@@ -242,3 +246,13 @@ APIx writes often use `application/merge-patch+json`. `/api/*` grids use `applic
 ## Capture appends
 
 New captures from `pnpm --filter gateway capture` are appended below. Cookies are stripped.
+
+## Capture 2026-09-04 — owner invoice Save (Cabbaroo 18059815)
+
+- `POST /api/jobpicker/GetJobPickerData` `application/json` keys: filters, displayMode, jobSortChoice, selectedJobId, isExpanded, templatesOnly, selectMode, useJobInSession, allowGlobalJob, includeGeneralJob, builderId, includeCounts
+- `POST /api/OwnerInvoices/Grid` `application/json` keys: gridRequest, pagingData, filters, jobIds
+
+## Capture 2026-09-04 — owner invoice Save (Cabbaroo 18059815)
+
+- `POST /api/OwnerInvoices/Grid` `application/json` keys: gridRequest, pagingData, filters, jobIds
+- `PUT /apix/v3/Invoices/save-invoice` `application/merge-patch+json` keys: title, customInvoiceId, description, closingText, status, amountPaid, ownerEmail, createInvoiceChkbox, notifyOwner, customFields, attachedFiles, files, showLineItemsToOwner, groupLineItemsByCostCode, showPaymentCode, showCustomFields, showCostCodes, showCategories, showContractorCertification, showArchitectCertification, showRetainage, showStoredMaterials, showItems, showInvoiceDescription, lineItems, builderCost, unifiedDeadlineRequest, internalNotes, priceType, containerIsValid, costCodeIds, ownerInvoiceLineItems, amount, taxMethod, taxGroupId, columnPreferences, invoiceFormat, lineItemGroupStrategy, hideLaborCostAndMarkup, invoiceId, useLineItems, invoicedFromEntity, job

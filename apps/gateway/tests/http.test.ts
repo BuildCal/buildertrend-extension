@@ -43,33 +43,39 @@ describe("HTTP /v1", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns not_captured for invoice draft save", async () => {
+  it("dry-runs invoice draft save once captured (no not_captured)", async () => {
     const { adapter, store, config } = createHarness(undefined, { gatewayToken: "secret" });
     const app = createHttpApp(config, adapter, store);
     const res = await app.request("/v1/invoices/save-draft", {
       method: "POST",
       headers: { "content-type": CONTENT_JSON, "x-bt-gateway-token": "secret" },
-      body: JSON.stringify({ invoiceId: 1, jobId: 2, dry_run: false }),
+      body: JSON.stringify({ invoiceId: 1, jobId: 2, dry_run: true, header: { title: "Draft" } }),
     });
-    expect(res.status).toBe(501);
-    const body = (await res.json()) as { error: string; discovery: { click: string } };
-    expect(body.error).toBe("not_captured");
-    expect(body.discovery.click).toMatch(/Save/i);
-    expect(body.discovery.click).toMatch(/without Send/i);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; dry_run: boolean; error?: string };
+    expect(body.ok).toBe(true);
+    expect(body.dry_run).toBe(true);
+    expect(body.error).toBeUndefined();
   });
 
-  it("returns not_captured for invoice add-lines until a real request fires", async () => {
+  it("dry-runs invoice add-lines once captured (no not_captured)", async () => {
     const { adapter, store, config } = createHarness(undefined, { gatewayToken: "secret" });
     const app = createHttpApp(config, adapter, store);
     const res = await app.request("/v1/invoices/add-lines", {
       method: "POST",
       headers: { "content-type": CONTENT_JSON, "x-bt-gateway-token": "secret" },
-      body: JSON.stringify({ invoiceId: 1, dry_run: false }),
+      body: JSON.stringify({
+        invoiceId: 1,
+        jobId: 2,
+        dry_run: true,
+        lines: [{ title: "x", ownerPrice: 0 }],
+      }),
     });
-    expect(res.status).toBe(501);
-    const body = (await res.json()) as { error: string; discovery: { expectedPaths?: string[] } };
-    expect(body.error).toBe("not_captured");
-    expect(body.discovery.expectedPaths).toContain("/api/LineItems/EntityAttachmentsToInvoice");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; dry_run: boolean; error?: string };
+    expect(body.ok).toBe(true);
+    expect(body.dry_run).toBe(true);
+    expect(body.error).toBeUndefined();
   });
 
   it("keeps health open without a token", async () => {
