@@ -35,6 +35,11 @@ and this project does not yet follow SemVer releases (pre-alpha).
 
 ### Changed
 
+- Owner-invoice `invoices.saveDraft` and `invoices.addLines` stay `not_captured`.
+  A 3 Sep 2026 dedicated-profile capture of the draft UI (`/false`) redirected
+  to Auth0 login (`auth_required`). No Save click and no
+  `EntityAttachmentsToInvoice` request. Do not invent those write bodies.
+
 - Bill create payload now matches the 2 Sep 2026 capture (`status` 9,
   `saveDraftToJob` false, `purchaseOrderId` -1, amounts on PUT). The old
   stub guessed `status` 0 / `saveDraftToJob` true / `isCreateNewFromPO`

@@ -91,13 +91,23 @@ UI: `/app/OwnerInvoices`, `/app/OwnerInvoices/OwnerInvoice/{invoiceId}/{jobId}/f
 | `invoices.get` | GET | `/apix/v3/Invoices/get-invoice?invoiceId=&job=` | Captured |
 | `invoices.accountingStatus` | GET | `/api/accounting/GetEntityAccountingStatus?...entityType=3` | Captured |
 | `invoices.changes` | GET | `/apix/v2/EntityChangeTracking/entity-changes` | Captured |
-| `invoices.saveDraft` | | Save was **not** in the DOM on the observed draft tab | **not_captured** |
-| `invoices.addLines` | | JS: `/api/LineItems/EntityAttachmentsToInvoice` | **not_captured** |
+| `invoices.saveDraft` | PUT | `/apix/v3/Invoices/save-invoice` | **Captured** (4 Sep 2026). `application/merge-patch+json`. Force `notifyOwner`/`createInvoiceChkbox` false, `status` 1 (Draft). Never Send. |
+| `invoices.addLines` | PUT | `/apix/v3/Invoices/save-invoice` (same Save with `lineItems` / `ownerInvoiceLineItems`) | **Captured** 2026-09-04. Related picker GET `/api/LineItems/EntityLineItemsToInvoice`. JS also has GET `/api/LineItems/EntityAttachmentsToInvoice` |
 | `invoices.send` | | | **send_disabled** |
 
 Custom invoice # must be unique per jobsite. Toast: `The Custom Invoice # has already been used for this jobsite`. ID input is flaky — re-read before save.
 
-**GST on owner invoices (not COs):** use the tenant’s tax group from `GET /api/TaxGroups/Dropdown` when the tax engine is on. This is **not** the change-order dummy-line pattern.
+**GST on owner invoices (not COs):** use the tenant’s tax group from `GET /api/TaxGroups/Dropdown` when the tax engine is on. This is **not** the change-order dummy-line pattern. Do not hard-code a tax group id; resolve at runtime.
+
+### Owner-invoice write capture (4 Sep 2026)
+
+Dedicated gateway profile (`/home/box/bt-gateway-profile`). Save fired:
+
+- `PUT /apix/v3/Invoices/save-invoice` `application/merge-patch+json`
+- Keys: title, customInvoiceId, description, closingText, status, amountPaid, ownerEmail, createInvoiceChkbox, notifyOwner, customFields, attachedFiles, files, showLineItemsToOwner, groupLineItemsByCostCode, showPaymentCode, showCustomFields, showCostCodes, showCategories, showContractorCertification, showArchitectCertification, showRetainage, showStoredMaterials, showItems, showInvoiceDescription, lineItems, builderCost, unifiedDeadlineRequest, internalNotes, priceType, containerIsValid, costCodeIds, ownerInvoiceLineItems, amount, taxMethod, taxGroupId, columnPreferences, invoiceFormat, lineItemGroupStrategy, hideLaborCostAndMarkup, invoiceId, useLineItems, invoicedFromEntity, job
+- Captured Save had `notifyOwner: false`, `createInvoiceChkbox: false`, `status: 1` (Draft). Gateway forces those on every `invoices.saveDraft`.
+
+`invoices.addLines` / `EntityAttachmentsToInvoice` still **not_captured**. Capture on a **different** unsent draft — do **not** use Cubbaroo `invoiceId` 18059815 / job 41648716 (Ops filling in BT UI). Never Send / pay / notify.
 
 ---
 
@@ -236,3 +246,13 @@ APIx writes often use `application/merge-patch+json`. `/api/*` grids use `applic
 ## Capture appends
 
 New captures from `pnpm --filter gateway capture` are appended below. Cookies are stripped.
+
+## Capture 2026-09-04 — owner invoice Save (Cabbaroo 18059815)
+
+- `POST /api/jobpicker/GetJobPickerData` `application/json` keys: filters, displayMode, jobSortChoice, selectedJobId, isExpanded, templatesOnly, selectMode, useJobInSession, allowGlobalJob, includeGeneralJob, builderId, includeCounts
+- `POST /api/OwnerInvoices/Grid` `application/json` keys: gridRequest, pagingData, filters, jobIds
+
+## Capture 2026-09-04 — owner invoice Save (Cabbaroo 18059815)
+
+- `POST /api/OwnerInvoices/Grid` `application/json` keys: gridRequest, pagingData, filters, jobIds
+- `PUT /apix/v3/Invoices/save-invoice` `application/merge-patch+json` keys: title, customInvoiceId, description, closingText, status, amountPaid, ownerEmail, createInvoiceChkbox, notifyOwner, customFields, attachedFiles, files, showLineItemsToOwner, groupLineItemsByCostCode, showPaymentCode, showCustomFields, showCostCodes, showCategories, showContractorCertification, showArchitectCertification, showRetainage, showStoredMaterials, showItems, showInvoiceDescription, lineItems, builderCost, unifiedDeadlineRequest, internalNotes, priceType, containerIsValid, costCodeIds, ownerInvoiceLineItems, amount, taxMethod, taxGroupId, columnPreferences, invoiceFormat, lineItemGroupStrategy, hideLaborCostAndMarkup, invoiceId, useLineItems, invoicedFromEntity, job

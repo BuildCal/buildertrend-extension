@@ -16,11 +16,26 @@ describe("command log", () => {
     expect(row.payloadSummary.keys).toEqual(expect.arrayContaining(["changeOrderId", "header"]));
   });
 
-  it("records not_captured attempts", async () => {
+  it("records dry-run for captured invoice saveDraft and addLines", async () => {
     const { store, invoke } = createHarness();
-    await expect(invoke("invoices.saveDraft", { invoiceId: 1, jobId: 2 })).rejects.toMatchObject({
-      code: "not_captured",
+    const preview = await invoke("invoices.saveDraft", {
+      invoiceId: 1,
+      jobId: 2,
+      dry_run: true,
+      header: { title: "x" },
     });
-    expect(store.commands.at(-1)?.errorCode).toBe("not_captured");
+    expect(preview.dry_run).toBe(true);
+    expect(store.commands.at(-1)?.verb).toBe("invoices.saveDraft");
+    expect(store.commands.at(-1)?.dryRun).toBe(true);
+    const add = await invoke("invoices.addLines", {
+      invoiceId: 1,
+      jobId: 2,
+      dry_run: true,
+      lines: [{ title: "y", ownerPrice: 0 }],
+    });
+    expect(add.dry_run).toBe(true);
+    expect(store.commands.at(-1)?.verb).toBe("invoices.addLines");
+    expect(store.commands.at(-1)?.dryRun).toBe(true);
+    expect(store.commands.at(-1)?.errorCode).toBeUndefined();
   });
 });

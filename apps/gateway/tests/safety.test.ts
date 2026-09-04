@@ -37,6 +37,9 @@ describe("safety locks", () => {
     expect(VERBS.find((v) => v.verb === "bills.update")?.captured).toBe(true);
     expect(VERBS.find((v) => v.verb === "bills.attach")?.captured).toBe(true);
     expect(VERBS.find((v) => v.verb === "bills.linkPurchaseOrder")?.captured).toBe(false);
+    expect(VERBS.find((v) => v.verb === "invoices.saveDraft")?.captured).toBe(true);
+    expect(VERBS.find((v) => v.verb === "invoices.addLines")?.captured).toBe(true);
+    expect(VERBS.find((v) => v.verb === "invoices.send")?.kind).toBe("send");
     for (const spec of remainingCaptures()) {
       expect(spec.discovery?.click).toBeTruthy();
     }

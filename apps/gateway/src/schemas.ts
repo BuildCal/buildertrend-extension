@@ -85,10 +85,18 @@ export const VERB_SCHEMAS = {
   "invoices.saveDraft": z.object({
     invoiceId: z.coerce.number().int().positive(),
     jobId: z.coerce.number().int().positive().optional(),
+    header: z.record(z.unknown()).optional(),
+    body: z.record(z.unknown()).optional(),
     ...dry,
   }),
   "invoices.addLines": z.object({
     invoiceId: z.coerce.number().int().positive(),
+    jobId: z.coerce.number().int().positive().optional(),
+    lines: z.array(z.record(z.unknown())).optional(),
+    lineItems: z.array(z.record(z.unknown())).optional(),
+    ownerInvoiceLineItems: z.array(z.record(z.unknown())).optional(),
+    body: z.record(z.unknown()).optional(),
+    header: z.record(z.unknown()).optional(),
     ...dry,
   }),
   "invoices.send": z.object({ invoiceId: z.coerce.number().int().positive(), ...dry }),

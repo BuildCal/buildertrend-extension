@@ -62,6 +62,8 @@ session.json
 bt-api-capture/
 **/chrome-profile/
 **/gateway-profile/
+**/bt-gateway-profile/
+/buildertrend-gateway
 
 # Tooling
 .turbo/
